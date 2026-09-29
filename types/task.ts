@@ -5,7 +5,7 @@ export type SortMode = "momentum" | "priority" | "deadline";
 
 export interface TaskInput {
   title: string;
-  category: string;
+  categoryId: string;
   priority: Priority;
   dueDate: string | null;
   scheduledDate: string;

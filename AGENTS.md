@@ -14,7 +14,7 @@ Use Codex skills only when they fit the active milestone. Prefer Next.js guidanc
 - Persist timer timestamps so active timers survive refresh; the browser counter is display-only.
 - Preserve historical task/session data for analytics and future estimates.
 - Treat Reading as a first-class workflow with page progress and weekly quotas.
-- Keep V1 focused on Today, Tasks, Analytics, Reading, and History.
+- Keep V1 focused on Today, Tasks, Week, Analytics, Reading, and History. Week is the due-date workload view authorized in Milestone 1.5.
 - Do not add speculative features unless `BUILD_PLAN.md` is explicitly updated.
 
 ## Engineering Rules

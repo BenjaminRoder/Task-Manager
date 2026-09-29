@@ -2,25 +2,41 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Task } from "@/types/task";
+import type { Category } from "@/types/category";
+import { taskRepository, type TaskRepository } from "./task-repository";
 import {
-  taskRepository,
-  STORAGE_KEY,
-  type TaskRepository,
-} from "./task-repository";
+  categoryRepository,
+  type CategoryRepository,
+} from "../categories/category-repository";
+import { STORAGE_KEY, LEGACY_STORAGE_KEY } from "../storage/local-store";
 import { localDate } from "./task-rules";
 
-export function useTasks(repository: TaskRepository = taskRepository) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+export function useTasks(
+  repository: TaskRepository = taskRepository,
+  categorySource: CategoryRepository = categoryRepository,
+) {
+  const [data, setData] = useState<{ tasks: Task[]; categories: Category[] }>({
+    tasks: [],
+    categories: [],
+  });
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [today, setToday] = useState<string | null>(null);
   const saving = useRef(false);
 
+  const load = useCallback(async () => {
+    const [tasks, categories] = await Promise.all([
+      repository.list(),
+      categorySource.list(),
+    ]);
+    return { tasks, categories };
+  }, [repository, categorySource]);
+
   const refresh = useCallback(async () => {
     try {
-      const saved = await repository.list();
-      setTasks(saved);
+      const saved = await load();
+      setData(saved);
       setToday(localDate());
       setReady(true);
       setError(null);
@@ -29,18 +45,17 @@ export function useTasks(repository: TaskRepository = taskRepository) {
       setError(
         problem instanceof Error
           ? problem.message
-          : "Could not load your tasks. Please retry.",
+          : "Could not load your tasks and categories. Please retry.",
       );
     }
-  }, [repository]);
+  }, [load]);
 
   useEffect(() => {
     let active = true;
-    repository
-      .list()
+    load()
       .then((saved) => {
         if (!active) return;
-        setTasks(saved);
+        setData(saved);
         setToday(localDate());
         setReady(true);
         setError(null);
@@ -50,11 +65,16 @@ export function useTasks(repository: TaskRepository = taskRepository) {
         setError(
           problem instanceof Error
             ? problem.message
-            : "Could not load your tasks. Please retry.",
+            : "Could not load your tasks and categories. Please retry.",
         );
       });
     const onStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY || event.key === null) void refresh();
+      if (
+        event.key === STORAGE_KEY ||
+        event.key === LEGACY_STORAGE_KEY ||
+        event.key === null
+      )
+        void refresh();
     };
     const onFocus = () => void refresh();
     const clock = window.setInterval(() => setToday(localDate()), 30_000);
@@ -66,19 +86,21 @@ export function useTasks(repository: TaskRepository = taskRepository) {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", onFocus);
     };
-  }, [refresh, repository]);
+  }, [refresh, load]);
 
   async function mutate(
-    operation: (repository: TaskRepository) => Promise<void>,
+    operation: (
+      repository: TaskRepository,
+      categories: CategoryRepository,
+    ) => Promise<void>,
   ): Promise<boolean> {
     if (saving.current || !ready) return false;
     saving.current = true;
     setBusy(true);
     setError(null);
     try {
-      await operation(repository);
-      const saved = await repository.list();
-      setTasks(saved);
+      await operation(repository, categorySource);
+      setData(await load());
       return true;
     } catch (problem) {
       setError(
@@ -93,5 +115,5 @@ export function useTasks(repository: TaskRepository = taskRepository) {
     }
   }
 
-  return { tasks, ready, busy, error, today, refresh, mutate };
+  return { ...data, ready, busy, error, today, refresh, mutate };
 }

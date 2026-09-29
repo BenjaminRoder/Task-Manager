@@ -11,6 +11,7 @@ import {
 } from "@/lib/tasks/task-rules";
 import { TaskForm } from "./task-form";
 import { TaskRow } from "./task-row";
+import { CategoryManager } from "@/components/categories/category-manager";
 
 const sortDescriptions: Record<SortMode, string> = {
   momentum: "Shortest tasks first. Your priorities stay the same.",
@@ -19,7 +20,8 @@ const sortDescriptions: Record<SortMode, string> = {
 };
 
 export function TaskBoard({ view }: { view: "today" | "all" }) {
-  const { tasks, ready, busy, error, today, refresh, mutate } = useTasks();
+  const { tasks, categories, ready, busy, error, today, refresh, mutate } =
+    useTasks();
   const [sort, setSort] = useState<SortMode>("momentum");
   const [editing, setEditing] = useState<Task | null>(null);
   const [notice, setNotice] = useState("");
@@ -31,7 +33,9 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
     sort,
   );
   const completed = visible.filter((task) => task.status === "completed");
-  const categories = [...new Set(tasks.map((task) => task.category))].sort();
+  const categoryById = new Map(
+    categories.map((category) => [category.id, category]),
+  );
 
   function edit(task: Task) {
     setEditing(task);
@@ -46,6 +50,7 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
       <TaskRow
         key={task.id}
         task={task}
+        category={categoryById.get(task.categoryId)!}
         today={today!}
         busy={busy || !ready}
         onEdit={() => edit(task)}
@@ -130,6 +135,21 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
             </strong>
           </div>
           <div ref={formContainer}>
+            <CategoryManager
+              categories={categories}
+              disabled={busy}
+              onCreate={(input) =>
+                mutate((_tasks, repository) => repository.create(input))
+              }
+              onUpdate={(id, input) =>
+                mutate((_tasks, repository) => repository.update(id, input))
+              }
+              onArchive={(id, archived) =>
+                mutate((_tasks, repository) =>
+                  repository.setArchived(id, archived),
+                )
+              }
+            />
             <TaskForm
               key={editing?.id ?? `new-${today}`}
               task={editing ?? undefined}

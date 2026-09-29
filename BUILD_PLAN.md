@@ -12,6 +12,53 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 1.5 — Custom categories and Week view — 2026-09-29
+
+The user explicitly added customizable categories and a due-date weekly workload view before Milestone 2. Week is now a sixth navigation destination. This is a local-only extension of Milestone 1; Supabase, authentication, timers, analytics, recurring tasks, and calendar integrations remain deferred.
+
+### Verified checklist
+
+- [x] Model categories with stable IDs, names, six-digit hex colors, and archive timestamps; tasks reference categoryId.
+- [x] Create categories with arbitrary names and preset/custom colors, edit names/colors, and reuse them on tasks.
+- [x] Share category badges/color indicators across Today, Tasks, category management, and Week.
+- [x] Archive/restore categories without deleting task relationships or historical records; block new assignments to archived categories.
+- [x] Migrate legacy name-based categories without duplicating repeated names or losing active/completed/deleted tasks.
+- [x] Keep the original v1 document untouched and validate the full migrated document before an atomic v2 write.
+- [x] Show Monday–Sunday due-date columns with daily incomplete counts and estimated workload, current-day indication, and relative workload bars.
+- [x] Navigate previous/current/next week with a clear date range; stack days on phones and allow contained scrolling at intermediate widths.
+- [x] Open calendar tasks in the existing task form and reuse existing completion/reopen/delete controls and repository operations.
+- [x] Preserve Today/Tasks selection, all three sorts, task CRUD, workload totals, and refresh persistence.
+- [x] Run lint, type checking, 14 automated tests, and production build successfully.
+- [x] Verify category/task workflows and desktop/mobile rendering in the native browser at 1536x1024, 390x844, and 320x740.
+
+### Architecture and migration
+
+- Added types/category.ts and replaced TaskInput.category with categoryId. Names/colors are resolved from category records at render time, so changes propagate without rewriting tasks.
+- TaskRepository and CategoryRepository expose asynchronous methods. Their local adapters share lib/storage/local-store.ts, which writes one document containing both collections. Components do not access localStorage, and no new dependency or global-state library was added.
+- Storage uses personal-task-manager.data.v2. If absent, the adapter validates personal-task-manager.tasks.v1 and converts it once. Category names are trimmed and deduplicated case-insensitively; the first spelling is retained and each distinct category receives a stable UUID and initial palette color. All existing task fields except the replaced category-name field are preserved, including IDs and completion/deletion timestamps. The untouched v1 document retains the original names for recovery.
+- Invalid data, dangling references, duplicate IDs, and invalid category colors prevent the write. Quota/access failures are surfaced without clearing previous data. A corrupted v2 document never silently falls back to the older snapshot.
+- Archive is the only category removal operation. Existing active, completed, and soft-deleted tasks retain their references; editing other fields while keeping an archived category is allowed. New assignments require an active category. Restore reuses the same ID.
+- Category text remains neutral/high-contrast; user color appears in small dots and calendar accent borders. Color is supplementary to the visible category name. One editable Personal category is supplied only when initializing an empty store.
+- Week groups by dueDate, independently of scheduledDate. It includes completed tasks on their due dates with a Completed label but excludes them from remaining counts/minutes. Deleted and undated tasks do not appear. Date arithmetic operates on calendar dates to avoid DST drift. The week starts Monday.
+- Existing task forms and rows are reused for Week editing/actions. UI state loads tasks/categories together from the shared repositories and refreshes after mutations or storage events.
+
+### Verification evidence
+
+- Automated tests: retained task/sort/workload tests plus migration deduplication and idempotence; all task-field preservation; untouched legacy recovery copy; failed migration/write protection; category lifecycle, duplicate-name/color validation, archiving/reassignment rules; invalid references; due-date grouping; completed/undated/deleted handling; Sunday, leap-year, DST, and year-boundary cases. All 14 pass.
+- Native browser/IAB: created a purple custom category and assigned tasks; renamed/recolored it blue and checked consistent computed colors; archived/restored it and edited an existing task while archived; created another custom hex-color category and reassigned a task. Names/colors updated across Today, Tasks, and Week and survived refresh.
+- Week browser checks: correct day placement/counts/minutes; previous/current/next navigation; current-day label; editing task title, duration, and due date moved it to the right day; completion changed daily totals to zero while preserving the task; reopening restored workload; deletion removed it from Week and Tasks after refresh; undated tasks stayed in Tasks.
+- Rechecked Momentum, Priority, and Deadline ordering after category changes. Mobile task/category editing worked at 390px and 320px without document overflow. Desktop showed seven readable columns. No relevant browser warning/error logs or framework overlay during the tested flows.
+- Temporary QA tasks were removed from active lists and QA categories archived after verification. Screenshots were saved outside the repository. No sample tasks are seeded into the application.
+- Production startup and /week smoke test passed at http://127.0.0.1:3001/week with the correct title, loaded calendar, current-day indication, and no browser warning/error logs.
+
+### Limitations and next step
+
+Data remains browser/origin-local, without authentication, cloud backup, or cross-device synchronization. Concurrent-tab writes remain last-write-wins. Use the upgraded app in all tabs: edits from old Milestone 1 builds still target v1 and are not merged after v2 migration. The legacy document is a recovery snapshot, not a live backup. Calendar due dates are date-only, and the week start is fixed to Monday. The existing ESLint 9 compatibility pin remains unchanged.
+
+The repository boundaries and stable category IDs are ready for Supabase adapters, category foreign keys, and ownership policies in Milestone 2. Database migrations, authentication/RLS, and a safe local-data import still need to be implemented and verified after the user's next authorization. Do not begin Milestone 2 in this session.
+
+---
+
 ## Milestone 1 scope update — 2026-09-28
 
 The user explicitly authorized a local-only frontend milestone before the original Supabase/authentication sequence. This supersedes the original database-first ordering for Milestone 1 only; the complete V1 requirements below remain in scope for later milestones. Local CRUD does not satisfy the eventual Supabase acceptance criteria.

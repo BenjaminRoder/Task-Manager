@@ -8,11 +8,12 @@ import {
   type Priority,
 } from "@/types/task";
 import { validateTask } from "@/lib/tasks/task-rules";
+import type { Category } from "@/types/category";
 
 interface TaskFormProps {
   task?: Task;
   today: string;
-  categories: string[];
+  categories: Category[];
   disabled: boolean;
   onSave: (input: TaskInput) => Promise<boolean>;
   onCancel?: () => void;
@@ -29,6 +30,9 @@ export function TaskForm({
   const id = useId();
   const titleRef = useRef<HTMLInputElement>(null);
   const [validation, setValidation] = useState<string | null>(null);
+  const availableCategories = categories.filter(
+    (category) => !category.archivedAt || category.id === task?.categoryId,
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,7 +42,7 @@ export function TaskForm({
     try {
       const input = validateTask({
         title: String(data.get("title") ?? ""),
-        category: String(data.get("category") ?? ""),
+        categoryId: String(data.get("categoryId") ?? ""),
         priority: String(data.get("priority")) as Priority,
         estimatedMinutes: Number(data.get("estimatedMinutes")),
         dueDate: String(data.get("dueDate") ?? "") || null,
@@ -94,19 +98,24 @@ export function TaskForm({
         <div className="form-details">
           <label htmlFor={`${id}-category`}>
             Category
-            <input
+            <select
               id={`${id}-category`}
-              name="category"
-              list={`${id}-categories`}
-              defaultValue={task?.category ?? "Personal"}
-              maxLength={60}
+              name="categoryId"
+              defaultValue={
+                task?.categoryId ?? availableCategories[0]?.id ?? ""
+              }
               required
-            />
-            <datalist id={`${id}-categories`}>
-              {categories.map((category) => (
-                <option key={category} value={category} />
+            >
+              <option value="" disabled>
+                Choose a category
+              </option>
+              {availableCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                  {category.archivedAt ? " (archived)" : ""}
+                </option>
               ))}
-            </datalist>
+            </select>
           </label>
           <label htmlFor={`${id}-priority`}>
             Priority
@@ -156,6 +165,11 @@ export function TaskForm({
           </label>
         </div>
       </fieldset>
+      {!availableCategories.length ? (
+        <p className="category-help">
+          Create or restore a category using Manage categories above.
+        </p>
+      ) : null}
       {validation ? (
         <p className="form-error" role="alert">
           {validation}

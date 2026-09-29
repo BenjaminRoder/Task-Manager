@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import type { Task } from "@/types/task";
+import type { Category } from "@/types/category";
+import { CategoryBadge } from "@/components/categories/category-badge";
 import { formatDate, formatDuration } from "@/lib/tasks/task-rules";
 
 interface TaskRowProps {
   task: Task;
+  category: Category;
   today: string;
   busy: boolean;
   onToggle: () => void;
@@ -15,6 +18,7 @@ interface TaskRowProps {
 
 export function TaskRow({
   task,
+  category,
   today,
   busy,
   onToggle,
@@ -41,7 +45,7 @@ export function TaskRow({
         <div className="task-copy">
           <h3>{task.title}</h3>
           <div className="task-meta">
-            <span>{task.category}</span>
+            <CategoryBadge category={category} />
             <span className={`priority priority-${task.priority}`}>
               {task.priority}
             </span>

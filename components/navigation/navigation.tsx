@@ -15,6 +15,11 @@ const sections = [
     path: "m8 12 3 3 5-6M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z",
   },
   {
+    href: "/week",
+    name: "Week",
+    path: "M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM8 14v4m4-4v4m4-4v4",
+  },
+  {
     href: "/analytics",
     name: "Analytics",
     path: "M4 21v-7h3v7m4 0V8h3v13m4 0V3h3v18",

@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Task, TaskInput } from "../types/task.ts";
-import {
-  createLocalTaskRepository,
-  STORAGE_KEY,
-} from "../lib/tasks/task-repository.ts";
+import { createLocalTaskRepository } from "../lib/tasks/task-repository.ts";
+import { createLocalStore, STORAGE_KEY } from "../lib/storage/local-store.ts";
 import {
   isDate,
   localDate,
@@ -16,7 +14,7 @@ import {
 
 const input: TaskInput = {
   title: "Read chapter",
-  category: "School",
+  categoryId: "school",
   priority: "medium",
   estimatedMinutes: 25,
   dueDate: null,
@@ -96,7 +94,7 @@ test("Dates use local calendar days; impossible dates and invalid inputs are rej
   assert.equal(validateTask({ ...input, title: "  Read  " }).title, "Read");
   for (const patch of [
     { title: "   " },
-    { category: " " },
+    { categoryId: " " },
     { estimatedMinutes: 0 },
     { estimatedMinutes: 1.5 },
     { estimatedMinutes: 1441 },
@@ -107,14 +105,25 @@ test("Dates use local calendar days; impossible dates and invalid inputs are rej
 });
 
 test("Repository persists creation, edits, completion, reopening, and soft deletion across instances", async () => {
-  const data = new Map<string, string>();
+  const data = new Map<string, string>([
+    [
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        tasks: [],
+        categories: [
+          { id: "school", name: "School", color: "#23624c", archivedAt: null },
+        ],
+      }),
+    ],
+  ]);
   const storage = {
     getItem: (key: string) => data.get(key) ?? null,
     setItem: (key: string, value: string) => {
       data.set(key, value);
     },
   };
-  const repository = createLocalTaskRepository(() => storage);
+  const repository = createLocalTaskRepository(createLocalStore(() => storage));
   assert.deepEqual(await repository.list(), []);
   await repository.create(input);
   const [created] = await repository.list();
@@ -123,7 +132,9 @@ test("Repository persists creation, edits, completion, reopening, and soft delet
     title: "Read chapter two",
     estimatedMinutes: 40,
   });
-  const freshRepository = createLocalTaskRepository(() => storage);
+  const freshRepository = createLocalTaskRepository(
+    createLocalStore(() => storage),
+  );
   assert.equal((await freshRepository.list())[0].title, "Read chapter two");
   await freshRepository.setStatus(created.id, "completed");
   assert.ok((await repository.list())[0].completedAt);
@@ -147,12 +158,14 @@ test("Corrupt or unsupported storage is not overwritten", async () => {
     JSON.stringify({ version: 1, tasks: [{ title: "broken" }] }),
   ]) {
     let value = raw;
-    const repository = createLocalTaskRepository(() => ({
-      getItem: () => value,
-      setItem: (_key, next) => {
-        value = next;
-      },
-    }));
+    const repository = createLocalTaskRepository(
+      createLocalStore(() => ({
+        getItem: () => value,
+        setItem: (_key, next) => {
+          value = next;
+        },
+      })),
+    );
     await assert.rejects(repository.list(), /left untouched/);
     await assert.rejects(repository.create(input), /left untouched/);
     assert.equal(value, raw);
@@ -160,15 +173,19 @@ test("Corrupt or unsupported storage is not overwritten", async () => {
 });
 
 test("Unavailable storage and failed writes report actionable errors", async () => {
-  const blocked = createLocalTaskRepository(() => {
-    throw new Error("denied");
-  });
+  const blocked = createLocalTaskRepository(
+    createLocalStore(() => {
+      throw new Error("denied");
+    }),
+  );
   await assert.rejects(blocked.list(), /Allow site storage/);
-  const full = createLocalTaskRepository(() => ({
-    getItem: () => null,
-    setItem: () => {
-      throw new Error("quota exceeded");
-    },
-  }));
+  const full = createLocalTaskRepository(
+    createLocalStore(() => ({
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("quota exceeded");
+      },
+    })),
+  );
   await assert.rejects(full.create(input), /could not be saved/);
 });

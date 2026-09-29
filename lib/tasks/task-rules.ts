@@ -21,11 +21,10 @@ export function isDate(value: unknown): value is string {
 
 export function validateTask(input: TaskInput): TaskInput {
   const title = input.title.trim();
-  const category = input.category.trim();
+  const categoryId = input.categoryId.trim();
   if (!title || title.length > 160)
     throw new Error("Enter a task title between 1 and 160 characters.");
-  if (!category || category.length > 60)
-    throw new Error("Enter a category between 1 and 60 characters.");
+  if (!categoryId) throw new Error("Choose a category for this task.");
   if (!priorities.includes(input.priority))
     throw new Error("Choose a valid priority.");
   if (
@@ -43,7 +42,7 @@ export function validateTask(input: TaskInput): TaskInput {
   ) {
     throw new Error("Choose a valid planned date and optional due date.");
   }
-  return { ...input, title, category };
+  return { ...input, title, categoryId };
 }
 
 export function tasksForToday(tasks: Task[], today = localDate()): Task[] {
