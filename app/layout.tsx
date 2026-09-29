@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Navigation } from "@/components/navigation/navigation";
 import "./globals.css";
+import { AuthGate } from "@/components/auth/auth-gate";
 
 export const metadata: Metadata = {
   title: { default: "Today · Task Manager", template: "%s · Task Manager" },
@@ -19,7 +20,7 @@ export default function RootLayout({
         <div className="app-shell">
           <Navigation />
           <main id="main-content" className="main-content" tabIndex={-1}>
-            {children}
+            <AuthGate>{children}</AuthGate>
           </main>
         </div>
       </body>

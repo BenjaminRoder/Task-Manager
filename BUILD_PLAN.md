@@ -12,6 +12,39 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 2 — Supabase persistence and ownership — 2026-09-29
+
+Implementation is complete for local validation; hosted acceptance remains pending credentials. This authorization supersedes the earlier instruction to defer Milestone 2, and narrows the original Tasks 2–4 to tasks/categories/auth/import only. Courses, books, time sessions, and predictive fields remain deferred.
+
+- [x] Add @supabase/ssr and @supabase/supabase-js, public environment configuration, browser/server clients, and Next.js proxy session refresh.
+- [x] Email/password sign-in for dashboard-created private accounts, persistent cookies, sign-out, account-scoped workspace remount, and setup/loading/error states.
+- [x] Preserve TaskRepository/CategoryRepository interfaces and existing domain models; inject Supabase adapters through context without queries in task/category presentation components.
+- [x] Reproducible SQL migration for tasks, categories, and local_imports, composite ownership keys/FK, date fields, constraints, indexes, timestamps, archive/soft-delete preservation, and archived-assignment guards.
+- [x] Explicit RLS policies and grants for each owned table; no anonymous access or hard-delete privileges; identity immutability; invoker-security import RPC.
+- [x] Consent-based local import with counts, stable fingerprint, atomic categories→tasks→archive restoration, preserved IDs/history, account/project local marker and transactional server ledger. Retain v1 and v2 recovery data.
+- [x] Preserve existing Today/Tasks/Week presentation, filters, sort modes, workload calculations, editing, and category workflows; replace their persistence boundary only.
+- [x] Document exact setup variables, migration application, private account creation, conflict/retry behavior, limitations, and live acceptance checklist in README.md.
+- [x] Install dependencies; pass lint, typecheck, 20 automated tests, production build; smoke-check unconfigured browser UI.
+- [ ] Apply migration to hosted Supabase and verify real Auth sessions and all data workflows end to end.
+- [ ] Verify hosted RLS with two real accounts and direct REST access; verify hosted failure/expiry handling and import retry.
+
+### Architecture and safety decisions
+
+UI → existing asynchronous repository contracts → Supabase adapters → PostgreSQL. Local repositories remain solely for recovery/tests. Without configuration, show setup instructions instead of silently reverting to a competing local source. Session ownership is verified before operations and enforced by RLS; the import RPC additionally checks the expected account to reject a session-switch race. No service-role key is required.
+
+The migration is `supabase/migrations/202609290001_milestone2.sql`. Text IDs preserve legacy IDs; `(user_id,id)` keys and a compound category FK enforce relationship ownership. Account deletion is restricted to preserve records. Category creation/update timestamps are new; task creation/completion/deletion timestamps are preserved. A database trigger disallows new assignments to archived categories while allowing historical references.
+
+Import operates on a validated snapshot only after explicit consent. It inserts its ledger entry, categories, tasks, and archive states in one database transaction. Failure rolls everything back. Identical retries become no-ops. Conflicting names/IDs fail safely without overwriting cloud data; no automatic merging is attempted. A browser marker write failure is reported as a successful cloud import with a marker warning; the durable ledger still prevents duplicates. Local recovery data is never cleared.
+
+### Validation evidence and limits
+
+All 14 prior tests remain. Six additional tests cover repository request mapping/lifecycle/scoping/session changes and local import consent boundary/history/discovery/retry/recovery. One of those executes the actual SQL migration in embedded PostgreSQL (PGlite) using explicit test Auth fixtures: it verifies two-user RLS, anonymous denial, cross-owner FK/insert/update rejection, uniqueness/check constraints, task/category lifecycle, archive rules, complete historical import, no-op retries, and transactional rollback. PGlite is a dev-only dependency; no fixture runs in production.
+
+Hosted Supabase was **not tested**: no environment credentials were present. Browser smoke verification covers setup state on direct Today and Week routes without credentials; signed-in UI workflows and real cookie persistence require hosted verification. Local success does not close those unchecked acceptance criteria.
+
+No offline queue, realtime sync, merge/conflict editor, public signup, password-reset UI, or permanent-delete UI. Same-record concurrent cloud edits remain last-write-wins. No later milestone features were added. Recommended Milestone 3 after hosted acceptance: persistent timer sessions and refresh recovery, only after explicit authorization.
+
+---
 ## Milestone 1.5 — Custom categories and Week view — 2026-09-29
 
 The user explicitly added customizable categories and a due-date weekly workload view before Milestone 2. Week is now a sixth navigation destination. This is a local-only extension of Milestone 1; Supabase, authentication, timers, analytics, recurring tasks, and calendar integrations remain deferred.

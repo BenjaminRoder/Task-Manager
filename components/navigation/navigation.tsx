@@ -67,7 +67,7 @@ export function Navigation() {
           </Link>
         ))}
       </nav>
-      <p className="storage-note">Saved on this device</p>
+      <p className="storage-note">Saved to your account</p>
     </aside>
   );
 }
