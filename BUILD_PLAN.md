@@ -12,6 +12,51 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 1 scope update — 2026-09-28
+
+The user explicitly authorized a local-only frontend milestone before the original Supabase/authentication sequence. This supersedes the original database-first ordering for Milestone 1 only; the complete V1 requirements below remain in scope for later milestones. Local CRUD does not satisfy the eventual Supabase acceptance criteria.
+
+### Verified Milestone 1 checklist
+
+- [x] Scaffold Next.js App Router, TypeScript, and Tailwind in the existing inner repository root, without another nested application folder.
+- [x] Preserve project guidance and review the existing .gitignore; it already covers dependencies, builds, local secrets, and test output.
+- [x] Correct README references and document setup, commands, architecture, and local persistence.
+- [x] Responsive navigation for Today, Tasks, Analytics, Reading, and History.
+- [x] Today landing page and functional all-tasks view; honest future-milestone placeholders elsewhere.
+- [x] Create, edit, complete, reopen, and confirm deletion of tasks.
+- [x] Typed title, category, priority, due date, estimate, status, identity, and timestamps; add a planned date to support Today correctly.
+- [x] Momentum, Priority, and Deadline sorting with independent manual priorities.
+- [x] Remaining workload calculated from the displayed incomplete tasks.
+- [x] Versioned local-storage adapter behind an asynchronous TaskRepository interface.
+- [x] Validate inputs, preserve malformed saved data, and report storage failures without silently resetting data.
+- [x] Lint, TypeScript check, six automated business/repository tests, and production build pass.
+- [x] Browser verification: create/edit/complete/reopen/delete, refresh persistence, all sort modes, future scheduling, navigation, and desktop/mobile layouts.
+
+### Implementation decisions and validation
+
+- UI components call a task hook/repository; storage and business rules live under lib/tasks. No state library, Supabase, authentication, timer, prediction, or fake data was added.
+- Today includes unfinished tasks scheduled today or earlier and tasks due today/overdue; completed tasks appear on their local completion day. Tasks includes future work and older completions. Dates use the browser's local calendar. Due times remain deferred.
+- Categories are editable strings for this local milestone, with suggestions derived from existing tasks. Database category records remain required when Supabase is added.
+- Completion retains records. Deletion sets deletedAt and hides the record after confirmation; no restore UI yet. No historical session data exists in this milestone.
+- Storage key: personal-task-manager.tasks.v1. Data remains in the current browser/origin; no cross-device sync or backup. Cross-tab storage events refresh the list, but simultaneous writes are last-write-wins.
+- Native browser/IAB tests used 1536x1024, 390x844, and 320x740 viewports. No horizontal overflow at the tested mobile widths; no browser warning/error logs in the tested flows. Test-created tasks were removed from active lists after verification.
+- Six Node tests cover independent sort order, Today/date boundaries and workload, input validation, repository lifecycle/persistence, malformed storage protection, and unavailable/full storage.
+- ESLint 10 crashes the current Next.js React plugin. Pin ESLint 9.39.5 until upstream support is available; its npm deprecation warning remains documented. All lint rules pass, and installation audit reported zero vulnerabilities.
+- next.config.ts explicitly sets the application root and disables generated agent rules, preserving AGENTS.md. Sandbox Git overrides are command-scoped only.
+
+### Visual review
+
+- Compared the generated desktop concept and native-browser screenshot with view_image at 1536x1024. Reviewed sidebar geometry/navigation, heading and control typography, white/gray/forest-green palette, quick-entry form spacing, and empty-state layout/copy.
+- Increased desktop typography and form-control spacing after the first comparison. The final render preserves the concept's hierarchy, palette, navigation, and open layout.
+- Intentional functional differences: an editable category field supports custom categories, and a planned-date input replaces the concept's simple today checkbox so future tasks and carryover work are unambiguous. Native select/date controls follow browser styling.
+- Above-the-fold copy matches the concept except for the intentional planned-date label change; responsive navigation moves above the content at mobile widths. No imagery, fabricated task data, or analytics panels were introduced.
+
+### Deferred and next milestone
+
+Supabase, authentication/RLS, timers, prediction, actual analytics, reading tracking, manual drag ordering, deadline times, and completed-workload summaries remain deferred. Recommended Milestone 2: Supabase schema/migrations, authentication and ownership checks, repository replacement, and a safe import path for existing local tasks (original Tasks 2–4). Obtain the user's next scope before proceeding.
+
+---
+
 ## Codex setup and skill recommendations
 
 Keep `AGENTS.md` at the repository root for durable project instructions. Keep feature requirements in `PROJECT_OVERVIEW.md` and milestone status in this file. Codex skills provide focused workflows; they are not application dependencies and do not change the V1 scope.
@@ -211,19 +256,19 @@ Do not claim completion if relevant checks fail.
 
 ## Task 1 — Initialize Repository
 
-- [ ] Create a Git repository.
-- [ ] Create the Next.js application.
-- [ ] Enable TypeScript.
-- [ ] Configure Tailwind CSS.
-- [ ] Confirm the application runs locally.
-- [ ] Add `.gitignore`.
-- [ ] Add `.env.example`.
-- [ ] Add `PROJECT_OVERVIEW.md`.
-- [ ] Add `BUILD_PLAN.md`.
-- [ ] Add `AGENTS.md`.
-- [ ] Open the repository in Codex and confirm root `AGENTS.md` is loaded.
-- [ ] Check availability of the recommended skills for the first milestone; add only those that fit current work.
-- [ ] Make initial Git commit.
+- [x] Create a Git repository.
+- [x] Create the Next.js application.
+- [x] Enable TypeScript.
+- [x] Configure Tailwind CSS.
+- [x] Confirm the application runs locally.
+- [x] Add `.gitignore`.
+- [x] Add `.env.example`.
+- [x] Add `PROJECT_OVERVIEW.md`.
+- [x] Add `BUILD_PLAN.md`.
+- [x] Add `AGENTS.md`.
+- [x] Open the repository in Codex and confirm root `AGENTS.md` is loaded.
+- [x] Check availability of the recommended skills for the first milestone; add only those that fit current work.
+- [x] Make initial Git commit.
 
 ### Acceptance Criteria
 
@@ -235,7 +280,7 @@ Do not claim completion if relevant checks fail.
 
 ### Implementation Notes
 
-_Add notes here when complete._
+- 2026-09-28: Initialized the app in the existing repository. Initial Git commit already existed (e2f6e32 was the starting HEAD). No extra nested folder. Framework, frontend, and React guidance consulted. Dev server, lint, typecheck, tests, and build verified. See Milestone 1 update above for scope and tooling limitations.
 
 ---
 
@@ -459,12 +504,12 @@ Main navigation:
 
 Required:
 
-- [ ] Desktop navigation.
-- [ ] Mobile navigation.
-- [ ] Active route state.
+- [x] Desktop navigation.
+- [x] Mobile navigation.
+- [x] Active route state.
 - [ ] User/logout control.
-- [ ] Responsive page container.
-- [ ] Shared loading/error patterns.
+- [x] Responsive page container.
+- [x] Shared loading/error patterns.
 
 ### Acceptance Criteria
 
@@ -474,7 +519,7 @@ Required:
 
 ### Implementation Notes
 
-_Add notes here when complete._
+- 2026-09-28: Responsive shell and all five routes verified. Today and Tasks are functional locally; other pages state their future scope. User/logout controls deferred with authentication.
 
 ---
 
@@ -484,20 +529,20 @@ _Add notes here when complete._
 
 Implement:
 
-- [ ] Create task.
-- [ ] Edit task.
-- [ ] Complete task.
-- [ ] Reopen task.
-- [ ] Archive/delete task behavior.
-- [ ] Assign category.
+- [x] Create task.
+- [x] Edit task.
+- [x] Complete task.
+- [x] Reopen task.
+- [x] Archive/delete task behavior.
+- [x] Assign category.
 - [ ] Assign course.
 - [ ] Assign task type.
-- [ ] Assign priority.
+- [x] Assign priority.
 - [ ] Assign due date/time.
-- [ ] Assign scheduled date.
-- [ ] Enter manual estimate.
+- [x] Assign scheduled date.
+- [x] Enter manual estimate.
 - [ ] Add notes/description.
-- [ ] Validate input.
+- [x] Validate input.
 
 ### Acceptance Criteria
 
@@ -509,7 +554,7 @@ Implement:
 
 ### Implementation Notes
 
-_Add notes here when complete._
+- 2026-09-28: Verified these operations using the user-authorized local-storage adapter. Due DATE is implemented; due TIME is deferred, so the combined date/time checkbox remains unchecked. Course, task type, notes, Supabase CRUD, and ownership validation remain pending. Completed/deleted records are retained locally.
 
 ---
 
@@ -519,21 +564,21 @@ _Add notes here when complete._
 
 Required sections:
 
-- [ ] Today task list.
+- [x] Today task list.
 - [ ] Overdue task section.
-- [ ] Quick-add task.
-- [ ] Total estimated workload.
+- [x] Quick-add task.
+- [x] Total estimated workload.
 - [ ] Completed workload.
-- [ ] Remaining workload.
+- [x] Remaining workload.
 - [ ] Start timer control.
-- [ ] Complete task control.
-- [ ] Sorting selector.
+- [x] Complete task control.
+- [x] Sorting selector.
 
 Sorting modes:
 
-- [ ] Momentum.
-- [ ] Priority.
-- [ ] Deadline.
+- [x] Momentum.
+- [x] Priority.
+- [x] Deadline.
 - [ ] Manual.
 
 ### Momentum Rule
@@ -562,7 +607,7 @@ Shortest first.
 
 ### Implementation Notes
 
-_Add notes here when complete._
+- 2026-09-28: Verified local Today selection, incomplete planned workload, and all three sorts. Overdue due dates are visibly labeled inline, rather than a separate section. Estimates are manual in Milestone 1. Timers, predictions, completed-workload totals, and persisted manual ordering remain pending.
 
 ---
 
@@ -852,12 +897,12 @@ Required tests:
 
 - [ ] Duration estimator.
 - [ ] Time-session aggregation.
-- [ ] Daily workload calculation.
+- [x] Daily workload calculation.
 - [ ] Reading quota calculation.
 - [ ] Analytics date grouping.
-- [ ] Task sorting.
-- [ ] Priority ordering.
-- [ ] Deadline ordering.
+- [x] Task sorting.
+- [x] Priority ordering.
+- [x] Deadline ordering.
 
 Where practical, add integration tests for:
 
@@ -874,7 +919,7 @@ Where practical, add integration tests for:
 
 ### Implementation Notes
 
-_Add notes here when complete._
+- 2026-09-28: Six passing Node tests cover sorting, Today selection, workload, validation, local persistence, retained deletion, and storage failures. Browser/IAB covered creation/editing/completion/reopening/deletion, refresh persistence, scheduling, sorting, navigation, and mobile editing. Future timer, reading, analytics, and authentication tests remain pending.
 
 ---
 
