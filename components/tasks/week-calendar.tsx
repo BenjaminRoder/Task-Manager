@@ -1,3 +1,5 @@
+"use client";
+import { ActualTime } from "@/components/timers/task-timer";
 import type { Category } from "@/types/category";
 import type { Task } from "@/types/task";
 import type { WeekDay } from "@/lib/tasks/week-rules";
@@ -93,6 +95,7 @@ export function WeekCalendar({
                           {task.priority}
                         </span>
                       </span>
+                      <ActualTime taskId={task.id} />
                       {task.status === "completed" ? (
                         <span className="week-completed-label">Completed</span>
                       ) : null}

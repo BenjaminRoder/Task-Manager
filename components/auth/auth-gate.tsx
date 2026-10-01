@@ -8,6 +8,9 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { createTimeSessionRepository } from "@/lib/supabase/time-session-repository";
+import { TimerProvider } from "@/lib/timers/timer-provider";
+import { ActiveTimerBar } from "@/components/timers/task-timer";
 import type { User } from "@supabase/supabase-js";
 import { browserClient } from "@/lib/supabase/client";
 import { supabaseConfig } from "@/lib/supabase/config";
@@ -193,6 +196,10 @@ function AccountWorkspace({
     () => createSupabaseRepositories(client, userId),
     [client, userId],
   );
+  const timeRepository = useMemo(
+    () => createTimeSessionRepository(client, userId),
+    [client, userId],
+  );
   const [candidate, setCandidate] = useState<LocalImport | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -280,9 +287,10 @@ function AccountWorkspace({
         </p>
       )}
       {notice && <p role="status">{notice}</p>}
-      <div key={revision} inert={busy}>
-        {children}
-      </div>
+      <TimerProvider key={revision} repository={timeRepository}>
+        <ActiveTimerBar />
+        <div inert={busy}>{children}</div>
+      </TimerProvider>
     </RepositoryContext.Provider>
   );
 }

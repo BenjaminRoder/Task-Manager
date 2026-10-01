@@ -1,5 +1,6 @@
 "use client";
 
+import { TaskTimer } from "@/components/timers/task-timer";
 import { useState } from "react";
 import type { Task } from "@/types/task";
 import type { Category } from "@/types/category";
@@ -30,6 +31,7 @@ export function TaskRow({
   const overdue = !complete && task.dueDate !== null && task.dueDate < today;
   return (
     <article
+      id={`task-${task.id}`}
       className={`task-row${complete ? " is-complete" : ""}`}
       aria-label={task.title}
     >
@@ -62,7 +64,7 @@ export function TaskRow({
           </div>
         </div>
         <span className="task-duration">
-          {formatDuration(task.estimatedMinutes)}
+          Estimated: {formatDuration(task.estimatedMinutes)}
         </span>
         <div className="row-actions">
           <button
@@ -83,6 +85,7 @@ export function TaskRow({
           </button>
         </div>
       </div>
+      <TaskTimer task={task} disabled={busy} />
       {confirmDelete ? (
         <div
           className="delete-confirmation"

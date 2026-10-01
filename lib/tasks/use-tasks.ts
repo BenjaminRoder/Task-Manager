@@ -103,6 +103,7 @@ export function useTasks() {
     setError(null);
     try {
       await operation(repository, categorySource);
+      window.dispatchEvent(new Event("tasks-changed"));
       try {
         setData(await load());
       } catch {

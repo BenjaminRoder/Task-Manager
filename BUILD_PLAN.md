@@ -12,6 +12,44 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 3 — Persistent task timers and session history — complete 2026-10-01
+
+The user authorized timing infrastructure only. This section supersedes older notes that defer timers; all prediction, analytics, reading, calendar integration, and scheduling work remains deferred.
+
+### Recovery audit
+
+The interrupted working tree already contained the timer migration, domain/repository contracts, Supabase adapter, account-level provider, task/global/history UI, Today/Tasks/Week integration, duration/database/adapter tests, hosted SQL acceptance script, and initial README notes. Those pieces were reviewed against the original 30-part prompt and preserved. No partial files, conflict markers, TODO implementations, or broken imports were found. BUILD_PLAN had not been updated, production/browser acceptance remained unfinished, and fresh-install README steps omitted the timer migration. Recovery corrects those documentation gaps, extends invalid SQL correction coverage, and completes validation before committing.
+
+### Architecture and historical model
+
+- `TimeSessionRepository` isolates persistence; the Supabase adapter checks the authenticated account, scopes reads/writes, paginates history, and reports failures. Existing task/category repository contracts remain intact.
+- `time_sessions` has a compound owner/UUID primary key, compound task ownership foreign key with restricted deletion, canonical start/end timestamps, generated fractional seconds, creation/update timestamps, and `voided_at` for erroneous sessions. There is no independently stored task total.
+- A partial unique index enforces one active session per account. Invoker-security RPCs use an account transaction lock, expected active-session consent, and idempotent request IDs. Confirmed switches stop/start in one transaction; stale confirmations fail safely.
+- Database guards set start/stop timestamps, prevent reopening sessions and identity changes, validate corrections, and close timers on task completion/soft deletion. Completion and session end share a timestamp. Reopening a task does not restart timing.
+- Account-level TimerProvider reconstructs sessions from Supabase, samples server time, and derives visible elapsed time from timestamps plus a monotonic clock. A one-second interval only redraws the display; focus/30-second refresh picks up other devices.
+- Task rows and Week editing expose start/stop and correctable history. Week cards show actual time. A compact global bar remains across routes with Stop, Inspect time, and a task link. Actual time sums all non-void sessions, including the currently elapsed active period.
+- Correction forms display local time, reject invalid/future ranges, and use optimistic `updated_at` checks. Removal retains the database row but excludes it from actual time. Completed/deleted tasks retain estimate, category, completion/history relationships.
+- RLS permits only own reads/inserts/updates, compound ownership prevents foreign-task sessions, and anonymous/hard-delete grants are absent. Browser code uses only public configuration and the user's Auth session.
+
+### Validation record
+
+- All 24 automated tests pass, including both real migration files executed in PGlite, duration sums, midnight/DST, invalid/future/infinite corrections, retry/consent, uniqueness, lifecycle/completion/deletion, ownership/anonymous denial, adapter paging/scoping/stale-write filters, and previous task/category/week/import tests.
+- Lint, TypeScript checking, and optimized production build pass. Production server starts successfully on port 3001; the final build passed signed-in Today/Tasks/Week smoke checks with clean browser error/warning logs. The temporary production process was stopped afterward.
+- Hosted migration was applied through SQL Editor on 2026-09-30. The rollback-only `supabase/tests/timer_acceptance.sql` returned PASS for lifecycle, retry, switching, correction duration, completion timestamp, history retention, and simulated cross-owner RLS under the actual `authenticated` role.
+- Browser QA passed against hosted Supabase: task creation/editing, all three sorts, Today carryover/workload, Week due-date placement/navigation/editing, category rename/recolor/archive/restore, start/stop/resume, canceled/confirmed switching, shared timer visibility, refresh, correction rejection, exact three-minute sum from two corrected sessions, removal reducing the total to two minutes, completion stopping timing, reopening without restart, and deletion closing the active session.
+- Sign-out/sign-in retained the earlier session history. The user intentionally stopped/restarted/switched the QA timer between visits, so this is not evidence that the original session remained continuously active. The restarted session was restored after sign-in and refresh, including its multi-hour elapsed duration across midnight; earlier stopped sessions remained inspectable.
+- Responsive QA at 320x740 and 1440x1000 covered Today, Tasks, Week/task editing, category controls, global timer, and session correction/history. No document overflow. Fixed task-form date/category clipping at <=400px by making fields a single column. No browser warning/error logs in the exercised flows.
+- Cleanup soft-deleted only the two identified Timer QA tasks, archived their QA category, and voided their six timing sessions. Hosted SQL confirmed all six historical rows remain, are ended/excluded from actual totals, and retain exact generated durations. No legitimate user records were modified. Screenshots stay outside the repository; no sample data or debug code is shipped.
+- Milestone 3 is accepted within the documented limits below. No further migration is required on the connected project; README contains reproducible setup for other environments.
+
+### Limitations and deferred work
+
+Cross-device UI synchronization polls every 30 seconds and on focus; database invariants remain authoritative. All sessions load for this personal-scale app. There is no offline queue, realtime engine, advanced timesheet/overlap validation, correction audit log, or user-facing restore for void/deleted records. A forgotten active timer continues until stopped/corrected. Local datetime inputs use the browser's interpretation of repeated DST hours; corrections use millisecond precision while original recorded durations retain database precision. Two real-account browser isolation and sustained concurrent-device stress were not performed; local two-owner SQL and hosted simulated-JWT RLS checks are distinct evidence.
+
+Recommended Milestone 4, only after new authorization: a deterministic, explainable duration estimator with explicit task classification scope, minimum-history thresholds, and manual override. Do not begin it here.
+
+---
+
 ## Milestone 2 — Supabase persistence and ownership — 2026-09-29
 
 Implementation is complete for local validation; hosted acceptance remains pending credentials. This authorization supersedes the earlier instruction to defer Milestone 2, and narrows the original Tasks 2–4 to tasks/categories/auth/import only. Courses, books, time sessions, and predictive fields remain deferred.
@@ -697,15 +735,15 @@ Shortest first.
 
 Required behavior:
 
-- [ ] Start task session.
-- [ ] Stop task session.
-- [ ] Persist start timestamp immediately.
-- [ ] Support multiple sessions per task.
-- [ ] Restore active timer after refresh.
-- [ ] Prevent accidental duplicate active sessions.
-- [ ] Calculate task total actual duration.
-- [ ] Display active elapsed time.
-- [ ] Handle abandoned/open sessions safely.
+- [x] Start task session.
+- [x] Stop task session.
+- [x] Persist start timestamp immediately.
+- [x] Support multiple sessions per task.
+- [x] Restore active timer after refresh.
+- [x] Prevent accidental duplicate active sessions.
+- [x] Calculate task total actual duration.
+- [x] Display active elapsed time.
+- [x] Handle abandoned/open sessions safely.
 
 ### Important
 
@@ -727,7 +765,7 @@ Elapsed display should be reconstructed from persisted timestamps.
 
 ### Implementation Notes
 
-_Add notes here when complete._
+2026-10-01: Completed and verified by Milestone 3 above. Durable sessions, database-enforced one-active rule, server timestamps, global visibility, correction/history, completion/deletion triggers, and RLS are implemented. See the Milestone 3 validation record and README for evidence, migration instructions, and limitations.
 
 ---
 

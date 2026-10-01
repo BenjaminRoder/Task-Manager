@@ -1,13 +1,13 @@
 # Personal Task Manager
 
-Private task management with Today, Tasks, Week, custom color categories, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Timers, prediction, analytics, reading, and calendar integration are not implemented.
+Private task management with Today, Tasks, Week, custom color categories, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers and correctable session history are available. Prediction, analytics, reading, and calendar integration remain deferred.
 
 See [BUILD_PLAN.md](BUILD_PLAN.md), [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), and [AGENTS.md](AGENTS.md).
 
 ## Set up Supabase (one time)
 
 1. Create a project at https://supabase.com/dashboard. Keep its database password private.
-2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. This creates all tables, constraints, indexes, triggers, RLS policies, and the transactional import function. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
+2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. Then run `supabase/migrations/202609300001_time_sessions.sql` once. Together these create the task/category/import and timer tables, constraints, indexes, triggers, RLS policies, and RPCs. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
 3. In **Authentication → Sign In / Providers**, enable Email/password. Disable public signups for this private application. Under **Authentication → Users → Add user → Create new user**, create your email/password account and mark the email confirmed. There is intentionally no public registration or password-reset UI; manage the private account in the dashboard.
 4. Copy the project URL and **publishable** API key from the project's Connect/API settings. Never use a secret or service-role key. Create `.env.local` in the inner repository (next to `package.json`):
 
@@ -95,4 +95,31 @@ Verified locally: dependency installation (zero audit vulnerabilities), lint, Ty
 
 **Requires live Supabase verification:** apply the migration on a hosted project; sign in/out and refresh; verify session expiry and cross-tab account changes; exercise task/category CRUD across Today/Tasks/Week; import a recovery copy and retry; test offline/save failures; use two real accounts to verify direct REST requests cannot read/write each other's data. No hosted connection was tested because credentials were unavailable. Complete those checks before treating Milestone 2 as operationally accepted.
 
-ESLint remains pinned to 9.39.5 for compatibility with the current Next.js React plugin. No timers, analytics, prediction, reading, or calendar features were added. Recommended next milestone: after live acceptance, persistent task timer sessions with refresh recovery, subject to a new scope authorization.
+ESLint remains pinned to 9.39.5 for compatibility with the current Next.js React plugin. The Milestone 2 verification record above is historical. See the Milestone 3 section below for the timer implementation and migration.
+
+## Milestone 3: persistent task timers
+
+The timer migration is `supabase/migrations/202609300001_time_sessions.sql`. It was applied to the connected hosted project through SQL Editor on 2026-09-30; do not rerun it there. For another environment, apply Milestone 2 first, then paste this entire new migration into SQL Editor and Run once, or use `npx supabase db push` with your linked/tracked project. If adopting CLI after the dashboard application, mark this already-applied migration with `npx supabase migration repair 202609300001 --status applied`. No new environment variables are needed. The existing public-key variable also accepts the legacy anon public key; never supply service-role credentials.
+
+Each task has **Start timer**, **Stop timer**, **Actual**, and **Time history** controls. Week exposes them through its existing task editor and shows actual time on calendar entries. A shared compact bar keeps the current timer visible across routes, links to its task, and offers Stop and Inspect time. Stop ends the current work period; Start again creates another session. Closing the browser, navigating, or signing out does not stop the saved session. If a timer was forgotten, stop it and correct its recorded times.
+
+`time_sessions` stores owner, UUID, task reference, start/end UTC timestamps, generated fractional duration in seconds, creation/update timestamps, and an optional removal timestamp. The task reference includes ownership. Sessions have RLS for own SELECT/INSERT/UPDATE, no hard DELETE grant, and an index on task history. A partial unique index permits only one active session per account. The task's total is the sum of non-removed session durations, including the visible elapsed active period; there is no separate cached task total.
+
+`TimeSessionRepository` and its Supabase adapter own all persistence. The account-level TimerProvider loads saved sessions, synchronizes its clock against server time, and updates the display using elapsed monotonic time rather than incrementing a counter. Recorded start/stop timestamps are set by PostgreSQL, so device clock changes cannot corrupt durations. Reload/sign-in reconstructs the active timer from the database. A 30-second refresh and window-focus refresh pick up other devices; this is not realtime synchronization.
+
+Starting a different task asks for confirmation, then a single RPC stops the expected current session and starts the new one transactionally. A stale confirmation fails without stopping an unexpected session. An account lock serializes starts; the unique index also protects direct writes. Request IDs make start retries idempotent; stop targets an exact session and an already-stopped session is a no-op. Task completion and soft deletion close the active session through a database trigger, even for writes outside this UI. Completion uses the same server timestamp as the stopped session. Reopening never starts a timer; ordinary edits leave timing intact.
+
+In **Time history**, stop an active session first, then correct its local start/end timestamps or remove an erroneous session. PostgreSQL enforces `end > start`, finite timestamps, and no future corrections, and automatically recalculates fractional seconds. Correction writes include the previously loaded `updated_at` so stale edits fail instead of overwriting another device's correction. Removal excludes the session from totals but retains its record. Displayed times use the device timezone. Unchanged local fields retain their original UTC instant (corrections normalize to JavaScript millisecond precision); entering an ambiguous repeated local hour during a daylight-saving transition uses the browser's interpretation (usually the earlier occurrence). There is no timezone-setting or advanced timesheet UI.
+
+Failures remain visible and controls require refreshed data before retrying uncertain writes. An old running indication may remain with an error until refreshed: it is not a claim that a failed stop succeeded. A completed server write followed by a failed reload is explicitly reported as saved with stale history. All sessions are currently loaded/paginated for this personal-scale application; future large-history optimization can add aggregation without changing the source of truth.
+
+No prediction, analytics dashboard, task classification, reading tracking, calendar integration, or scheduling was added.
+
+
+### Milestone 3 final verification — 2026-10-01
+
+All 24 tests, lint, type checking, and the production build pass. Timer tests execute both actual migrations in PGlite and verify duration logic, lifecycle, consent/retries, correction constraints, completion/deletion, ownership, and adapter requests/errors. Existing task/category/week/import tests remain intact.
+
+Live hosted SQL acceptance passed using `supabase/tests/timer_acceptance.sql` (a rollback-only test under the authenticated role). Cross-owner checks used a simulated second JWT subject, not a second real browser login. Browser checks against Supabase covered start/stop/resume, canceled/confirmed switching, navigation/refresh, edits while timing, exact corrected totals, removal, completion/reopen, deletion, categories, sorting, and Week workload. Session history survived sign-out/sign-in. The user stopped/restarted the QA timer between visits; the restarted timer and earlier history were recovered, rather than claiming uninterrupted operation of the original session.
+
+Desktop (1440px) and narrow (320px) QA passed without horizontal overflow. Task fields now stack below 400px so native dates remain readable. QA tasks were soft-deleted, their category archived, and all six test sessions voided; historical rows remain recoverable but do not contribute to actual time. No real user records were removed. Multi-device load testing, two-real-account browser isolation, and real network-outage testing remain unperformed; local SQL/adapter failure tests and hosted simulated-owner checks are the available evidence. See BUILD_PLAN.md for the full validation record and deferred scope.

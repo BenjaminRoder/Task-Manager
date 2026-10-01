@@ -1045,3 +1045,25 @@ h2 {
 .account-bar { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; overflow-wrap: anywhere; }
 .import-panel { padding: 1.25rem; border: 1px solid #cbd3cd; border-radius: .75rem; margin-bottom: 1.5rem; background: #f4f7f4; }
 .import-panel h2 { font-size: 1.15rem; font-weight: 600; }
+
+.active-timer-area { margin-bottom: 1rem; }
+.active-timer-bar, .timer-controls { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+.active-timer-bar { padding: 1rem; background: #edf5ee; border: 1px solid #b5c9b9; border-radius: .75rem; }
+.active-timer-bar > span:first-child { flex: 1 1 12rem; overflow-wrap: anywhere; min-width: 0; }
+.timer-clock { font-variant-numeric: tabular-nums; font-weight: 600; }
+.task-timing { padding: .75rem 0 0 2rem; }
+.actual-time { font-size: .8rem; color: #435249; }
+.time-history { padding: 1rem 0; }
+.time-history > p, .session-entry p { font-size: .8rem; margin-top: .5rem; color: #526158; }
+.time-history ul { list-style: none; padding: 0; }
+.session-entry { padding: .85rem 0; border-bottom: 1px solid #dde4de; overflow-wrap: anywhere; font-size: .85rem; }
+.session-entry .timer-controls { margin-top: .5rem; }
+.session-correction { display: grid; gap: .75rem; margin-top: .75rem; }
+.session-correction label { display: grid; gap: .3rem; min-width: 0; }
+.session-correction input { padding: .5rem; border: 1px solid #cbd3cd; border-radius: .4rem; min-width: 0; width: 100%; max-width: 100%; }
+@media (max-width: 400px) {
+  .form-details { grid-template-columns: minmax(0, 1fr); }
+  .task-timing { padding-left: 0; }
+  .timer-controls button { padding: .55rem .65rem; }
+  .active-timer-bar { padding: .75rem; }
+}
