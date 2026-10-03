@@ -16,9 +16,10 @@ export interface TaskRepository {
 
 function validateCategoryAssignment(
   data: LocalData,
-  categoryId: string,
-  previousCategoryId?: string,
+  categoryId: string | null,
+  previousCategoryId?: string | null,
 ) {
+  if (categoryId === null) return;
   const category = data.categories.find(
     (category) => category.id === categoryId,
   );
@@ -54,6 +55,7 @@ export function createLocalTaskRepository(store: LocalStore): TaskRepository {
     async create(input) {
       const fields = validateTask(input);
       const data = store.read();
+      if (fields.courseId || fields.taskTypeId) throw new Error("Course and task type assignments require the cloud repository.");
       validateCategoryAssignment(data, fields.categoryId);
       data.tasks.push({
         ...fields,
@@ -67,6 +69,7 @@ export function createLocalTaskRepository(store: LocalStore): TaskRepository {
     },
     async update(id, input) {
       const fields = validateTask(input);
+      if (fields.courseId || fields.taskTypeId) throw new Error("Course and task type assignments require the cloud repository.");
       change(id, (task, data) => {
         validateCategoryAssignment(data, fields.categoryId, task.categoryId);
         return { ...task, ...fields };

@@ -356,6 +356,37 @@ details.task-duration p {
   color: var(--muted);
   font-size: 12px;
 }
+.classification-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 12px 0;
+}
+.classification-fields label {
+  display: grid;
+  flex: 1 1 160px;
+  min-width: 0;
+  gap: 6px;
+  font-size: 12px;
+}
+.classification-fields input,
+.classification-fields select {
+  width: 100%;
+  min-width: 0;
+}
+.classification-management summary,
+.classification-selectors summary {
+  cursor: pointer;
+}
+.classification-selectors {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.classification-management .category-list li > span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
 .row-actions {
   display: flex;
   gap: 2px;

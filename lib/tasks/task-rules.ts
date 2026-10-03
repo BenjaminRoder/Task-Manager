@@ -22,10 +22,11 @@ export function isDate(value: unknown): value is string {
 
 export function validateTask(input: TaskInput): TaskInput {
   const title = input.title.trim();
-  const categoryId = input.categoryId.trim();
+  const categoryId = validateClassificationId(input.categoryId, "category");
+  const courseId = validateClassificationId(input.courseId ?? null, "course");
+  const taskTypeId = validateClassificationId(input.taskTypeId ?? null, "task type");
   if (!title || title.length > 160)
     throw new Error("Enter a task title between 1 and 160 characters.");
-  if (!categoryId) throw new Error("Choose a category for this task.");
   if (!priorities.includes(input.priority))
     throw new Error("Choose a valid priority.");
   if (
@@ -43,7 +44,15 @@ export function validateTask(input: TaskInput): TaskInput {
   ) {
     throw new Error("Choose a valid planned date and optional due date.");
   }
-  return { ...input, title, categoryId };
+  return { ...input, title, categoryId, courseId, taskTypeId };
+}
+
+function validateClassificationId(value: string | null, label: string): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || !value.trim() || value.trim().length > 200) {
+    throw new Error(`Choose a valid ${label}, or leave it unassigned.`);
+  }
+  return value.trim();
 }
 
 export function tasksForToday(tasks: Task[], today = localDate()): Task[] {

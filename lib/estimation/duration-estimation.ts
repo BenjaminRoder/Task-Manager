@@ -9,16 +9,21 @@ export const estimationRules = {
   highConfidenceSamples: 8,
 } as const;
 
+export type PredictionSource = "course_task_type" | "course" | "category_task_type" |
+  "task_type" | "category" | "global" | "fallback";
+
 export interface DurationPrediction {
   minutes: number | null;
-  source: "category" | "global" | "fallback";
+  source: PredictionSource;
   sampleSize: number;
   confidence: "low" | "medium" | "high";
 }
 export type Predictions = ReadonlyMap<string, DurationPrediction>;
 export interface HistoricalObservation {
   taskId: string;
-  categoryId: string;
+  categoryId: string | null;
+  courseId?: string | null;
+  taskTypeId?: string | null;
   completedAt: number;
   minutes: number;
 }
@@ -50,21 +55,37 @@ export function historicalObservations(
     // recompletion uses the accumulated ledger and latest completion timestamp.
     if (task.status !== "completed" || !Number.isFinite(completedAt) ||
       activeTasks.has(task.id) || !Number.isFinite(minutes) || minutes <= 0) return [];
-    return [{ taskId: task.id, categoryId: task.categoryId, completedAt, minutes }];
+    return [{ taskId: task.id, categoryId: task.categoryId, courseId: task.courseId ?? null,
+      taskTypeId: task.taskTypeId ?? null, completedAt, minutes }];
   });
 }
 
 export function predictDuration(
-  task: Pick<Task, "id" | "categoryId">,
+  task: Pick<Task, "id" | "categoryId" | "courseId" | "taskTypeId">,
   observations: readonly HistoricalObservation[],
 ): DurationPrediction {
   const recent = observations
     .filter((row) => row.taskId !== task.id && Number.isFinite(row.minutes) &&
       row.minutes > 0 && Number.isFinite(row.completedAt))
     .sort((a, b) => b.completedAt - a.completedAt || a.taskId.localeCompare(b.taskId));
-  const category = recent.filter((row) => row.categoryId === task.categoryId);
-  const source = category.length >= estimationRules.minimumSamples ? "category" : "global";
-  const samples = (source === "category" ? category : recent).slice(0, estimationRules.maximumSamples);
+  // Missing dimensions never match each other as a specific classification.
+  const levels: { source: PredictionSource; matches: (row: HistoricalObservation) => boolean }[] = [
+    { source: "course_task_type", matches: (row) => !!task.courseId && !!task.taskTypeId && row.courseId === task.courseId && row.taskTypeId === task.taskTypeId },
+    { source: "course", matches: (row) => !!task.courseId && row.courseId === task.courseId },
+    { source: "category_task_type", matches: (row) => !!task.categoryId && !!task.taskTypeId && row.categoryId === task.categoryId && row.taskTypeId === task.taskTypeId },
+    { source: "task_type", matches: (row) => !!task.taskTypeId && row.taskTypeId === task.taskTypeId },
+    { source: "category", matches: (row) => !!task.categoryId && row.categoryId === task.categoryId },
+    { source: "global", matches: () => true },
+  ];
+  let source: PredictionSource = "global";
+  let samples = recent.slice(0, estimationRules.maximumSamples);
+  for (const level of levels) {
+    const comparable = recent.filter(level.matches);
+    if (comparable.length < estimationRules.minimumSamples) continue;
+    source = level.source;
+    samples = comparable.slice(0, estimationRules.maximumSamples);
+    break;
+  }
   if (samples.length < estimationRules.minimumSamples) {
     return { minutes: null, source: "fallback", sampleSize: samples.length, confidence: "low" };
   }
@@ -77,8 +98,8 @@ export function predictDuration(
     minutes,
     source,
     sampleSize: samples.length,
-    confidence: source === "category" && samples.length >= estimationRules.highConfidenceSamples
-      ? "high" : source === "category" ? "medium" : "low",
+    confidence: source !== "global" && samples.length >= estimationRules.highConfidenceSamples
+      ? "high" : source !== "global" ? "medium" : "low",
   };
 }
 
@@ -95,7 +116,18 @@ export function effectiveEstimate(task: Pick<Task, "estimatedMinutes">, predicti
   return estimationRules.defaultMinutes;
 }
 
-export function predictionExplanation(prediction: DurationPrediction): string {
+export function predictionExplanation(prediction: DurationPrediction, labels: {
+  category?: string; course?: string; taskType?: string;
+} = {}): string {
   if (prediction.minutes === null) return `Not enough history yet (need ${estimationRules.minimumSamples} completed timed tasks).`;
-  return `Based on ${prediction.sampleSize} recent ${prediction.source === "category" ? "same-category" : "overall"} completed tasks · ${prediction.confidence} confidence (heuristic).`;
+  const comparisons: Record<PredictionSource, string> = {
+    course_task_type: `${labels.course ?? "same-course"} ${labels.taskType ?? "same-type"}`,
+    course: labels.course ?? "same-course",
+    category_task_type: `${labels.category ?? "same-category"} ${labels.taskType ?? "same-type"}`,
+    task_type: labels.taskType ?? "same-type",
+    category: labels.category ?? "same-category",
+    global: "overall",
+    fallback: "overall",
+  };
+  return `Based on ${prediction.sampleSize} recent ${comparisons[prediction.source]} completed tasks · ${prediction.confidence} confidence (heuristic).`;
 }

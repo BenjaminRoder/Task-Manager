@@ -7,16 +7,22 @@ import type { Task } from "@/types/task";
 import type { Category } from "@/types/category";
 import type { TaskRepository } from "./task-repository";
 import type { CategoryRepository } from "../categories/category-repository";
+import type { Course } from "@/types/course";
+import type { TaskType } from "@/types/task-type";
+import type { CourseRepository } from "../classification/course-repository";
+import type { TaskTypeRepository } from "../classification/task-type-repository";
 import { STORAGE_KEY, LEGACY_STORAGE_KEY } from "../storage/local-store";
 import { localDate } from "./task-rules";
 import { useRepositories } from "../supabase/repository-context";
 
 export function useTasks() {
   const timer = useTimer();
-  const { tasks: repository, categories: categorySource } = useRepositories();
-  const [data, setData] = useState<{ tasks: Task[]; categories: Category[] }>({
+  const { tasks: repository, categories: categorySource, courses: courseSource, taskTypes: taskTypeSource } = useRepositories();
+  const [data, setData] = useState<{ tasks: Task[]; categories: Category[]; courses: Course[]; taskTypes: TaskType[] }>({
     tasks: [],
     categories: [],
+    courses: [],
+    taskTypes: [],
   });
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -26,12 +32,14 @@ export function useTasks() {
   const requestVersion = useRef(0);
 
   const load = useCallback(async () => {
-    const [tasks, categories] = await Promise.all([
+    const [tasks, categories, courses, taskTypes] = await Promise.all([
       repository.list(true),
       categorySource.list(),
+      courseSource.list(),
+      taskTypeSource.list(),
     ]);
-    return { tasks, categories };
-  }, [repository, categorySource]);
+    return { tasks, categories, courses, taskTypes };
+  }, [repository, categorySource, courseSource, taskTypeSource]);
 
   const refresh = useCallback(async () => {
     if (saving.current) return;
@@ -97,6 +105,8 @@ export function useTasks() {
     operation: (
       repository: TaskRepository,
       categories: CategoryRepository,
+      courses: CourseRepository,
+      taskTypes: TaskTypeRepository,
     ) => Promise<void>,
   ): Promise<boolean> {
     if (saving.current || !ready) return false;
@@ -105,7 +115,7 @@ export function useTasks() {
     setBusy(true);
     setError(null);
     try {
-      await operation(repository, categorySource);
+      await operation(repository, categorySource, courseSource, taskTypeSource);
       window.dispatchEvent(new Event("tasks-changed"));
       try {
         setData(await load());

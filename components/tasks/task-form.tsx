@@ -10,11 +10,15 @@ import {
 import { validateTask } from "@/lib/tasks/task-rules";
 import type { Category } from "@/types/category";
 import { estimationRules } from "@/lib/estimation/duration-estimation";
+import type { Course } from "@/types/course";
+import type { TaskType } from "@/types/task-type";
 
 interface TaskFormProps {
   task?: Task;
   today: string;
   categories: Category[];
+  courses: Course[];
+  taskTypes: TaskType[];
   disabled: boolean;
   onSave: (input: TaskInput) => Promise<boolean>;
   onCancel?: () => void;
@@ -24,6 +28,8 @@ export function TaskForm({
   task,
   today,
   categories,
+  courses,
+  taskTypes,
   disabled,
   onSave,
   onCancel,
@@ -43,7 +49,9 @@ export function TaskForm({
     try {
       const input = validateTask({
         title: String(data.get("title") ?? ""),
-        categoryId: String(data.get("categoryId") ?? ""),
+        categoryId: String(data.get("categoryId") ?? "") || null,
+        courseId: String(data.get("courseId") ?? "") || null,
+        taskTypeId: String(data.get("taskTypeId") ?? "") || null,
         priority: String(data.get("priority")) as Priority,
         estimatedMinutes: String(data.get("estimatedMinutes") ?? "").trim() === "" ? null : Number(data.get("estimatedMinutes")),
         dueDate: String(data.get("dueDate") ?? "") || null,
@@ -103,12 +111,11 @@ export function TaskForm({
               id={`${id}-category`}
               name="categoryId"
               defaultValue={
-                task?.categoryId ?? availableCategories[0]?.id ?? ""
+                task?.categoryId ?? ""
               }
-              required
             >
-              <option value="" disabled>
-                Choose a category
+              <option value="">
+                No category
               </option>
               {availableCategories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -165,11 +172,32 @@ export function TaskForm({
             />
           </label>
         </div>
+        <details className="classification-selectors" open={!!(task?.courseId || task?.taskTypeId)}>
+          <summary>Course and task type (optional)</summary>
+          <div className="classification-fields">
+            <label htmlFor={`${id}-course`}>Course
+              <select id={`${id}-course`} name="courseId" defaultValue={task?.courseId ?? ""}>
+                <option value="">No course</option>
+                {courses.filter((course) => !course.archivedAt || course.id === task?.courseId).map((course) => (
+                  <option key={course.id} value={course.id}>{course.code ? `${course.code} · ` : ""}{course.name}{course.archivedAt ? " (archived)" : ""}</option>
+                ))}
+              </select>
+            </label>
+            <label htmlFor={`${id}-task-type`}>Task type
+              <select id={`${id}-task-type`} name="taskTypeId" defaultValue={task?.taskTypeId ?? ""}>
+                <option value="">No task type</option>
+                {taskTypes.filter((type) => !type.archivedAt || type.id === task?.taskTypeId).map((type) => (
+                  <option key={type.id} value={type.id}>{type.name}{type.archivedAt ? " (archived)" : ""}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </details>
       </fieldset>
       <p className="category-help">Leave the manual estimate blank to use history, or {estimationRules.defaultMinutes} min until enough history exists. A manual estimate overrides the prediction.</p>
       {!availableCategories.length ? (
         <p className="category-help">
-          Create or restore a category using Manage categories above.
+          Categories are optional. Create or restore one using Manage categories above.
         </p>
       ) : null}
       {validation ? (

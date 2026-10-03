@@ -12,9 +12,52 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 4.5 — Task classification and full estimation hierarchy — implemented, hosted acceptance pending 2026-10-03
+
+### Verified implementation and local acceptance
+
+- [x] Independent user-owned Courses and Task Types with names, optional course code, creation/update timestamps, and archive/restore.
+- [x] Backward-compatible migration preserves every existing task and estimate; optional category/course/type references support title-only capture.
+- [x] Composite ownership keys/FKs, RLS, anonymous denial, identity guards, non-destructive archives, and archived-assignment guards.
+- [x] Explicit CourseRepository/TaskTypeRepository contracts and account-pinned, paginated Supabase adapters; no presentation queries or local-storage fallback.
+- [x] Manage/create/rename/archive/restore classifications alongside task capture on Today, Tasks, and Week.
+- [x] Compact optional selectors, current/archived classification labels, and named prediction explanations in task details; Week cards/editing preserve assignments.
+- [x] Full matching hierarchy with M4 minimum/window/weighting/rounding/manual precedence retained.
+- [x] Historical reclassification changes future derived predictions; M4 session eligibility, soft-delete, reopening, correction/void behavior retained.
+- [x] All original 39 tests retained; 18 added classification/hierarchy/adapter/PostgreSQL tests (57 total) pass, alongside lint, typecheck, and optimized build.
+- [x] Isolated browser UI fixture verifies actual components with synthetic history: title-only/category-only/course-only/type-only capture/editing, all six hierarchy levels and insufficient-history fallback, named explanations, manual override, Momentum, Today/Week, rename/archive/restore, retained archived assignments, refresh, timer start/stop UI recovery, and 320px creation/editing.
+- [ ] Apply pending M4 migration `202610030001_optional_manual_estimate.sql`, then M4.5 migration `202610030002_task_classification.sql` to the hosted project.
+- [ ] Repeat the M4 and M4.5 flows against hosted Supabase with an authenticated browser, including real timer completion/correction/void, persisted classification edits, archived references, refresh, mobile workflows, and ownership checks.
+
+### Classification architecture and semantics
+
+Category remains the broad area of life/work; Course supplies optional academic context; Task Type independently describes the kind of work. There is no parent/child taxonomy, category restriction, hard-coded task-type enum, or automatic classification seed. Courses have a name (1–60 characters), optional code (1–20), stable ID and timestamps; task types have a name (1–60), stable ID and timestamps. Names are unique within each account/table after case/outer-space normalization, including archived records. Codes are labels, not identity or a unique key.
+
+The migration follows existing compound `(user_id,id)` keys and owner FKs, retaining RLS and invoker-security guards. It permits null category and adds nullable `course_id`/`task_type_id`. Existing tasks keep their categories/estimates with null new references. Archived records remain readable and preserve IDs/history; unchanged archived references may be kept while editing a task, but a new/reassigned archived reference is rejected. Users can clear assignments or restore records. Relationship checks lock classifications consistently with category assignment to avoid an archive/assignment race. No hard-delete grant or UI is introduced.
+
+UI → explicit repository interfaces → Supabase adapters → PostgreSQL remains the production architecture. Existing load/mutation handling fetches all four collections in parallel and reports errors. Missing hosted tables cause actionable load errors, not silent fallback. Legacy recovery storage remains legacy-only: it accepts old snapshots/missing new fields and nullable categories, never invents course/type records, and rejects unsupported non-null classification references. Optional course/type properties at the legacy TypeScript boundary normalize to null in persisted row mappings and task writes.
+
+### Estimation hierarchy and unchanged mechanics
+
+The first group with at least three eligible observations wins: **course + task type → course → category + task type → task type → category → global → no prediction**. Each non-global group requires its identifying fields to be present; null/missing fields never create a fake specific group. Groups overlap rather than forming one nested taxonomy: sample size always counts only rows matching the selected level. More numerous/newer broader groups never replace a sufficient specific group.
+
+M4 mathematics are unchanged: newest 20 matching observations, descending completion timestamp and deterministic task-ID tie break, rank weights N..1, weighted mean, nearest-five-minute half-up rounding and five-minute floor. Confidence extends the same M4 rule to each specific source: 3–7 medium, 8–20 high; global/fallback low, always labeled heuristic. Effective estimate remains valid manual → valid prediction → 25 minutes, shared by Momentum and Today/Week. Actual duration still derives from stopped, non-void sessions; active/zero/invalid sessions do not train predictions.
+
+Historical comparison uses each completed task's **current stored** category/course/type IDs. Reclassification changes future predictions immediately after task reload; renaming changes labels while IDs keep the same groups. Completed soft-deleted tasks remain observations, archived classifications remain valid historical context, and reopened tasks are excluded until recompleted. There are no new snapshots or actual-duration caches. Priority/deadline sorting and timer persistence are unchanged.
+
+### Evidence, hosted status, and next step
+
+2026-10-03: Real migration tests in embedded PostgreSQL verify preserved pre-migration tasks, nullable assignments, course/type creation/rename/archive/restore, timestamps and validation, unchanged archived references, new archived-reference rejection, retained completed/deleted joins, identity immutability, duplicate names, two-owner RLS/spoofing/cross-owner references, anonymous denial and restricted deletes. A persisted timer-ledger test reclassifies historical tasks through all matching levels and verifies deletion/reopening/recompletion. The existing timer acceptance test now executes all four migrations; all M3/M4 regressions still pass. New adapter fixtures verify ownership pinning, owner filters, paging request shape, error propagation, timestamps/archives, and independent nullable task writes.
+
+`npm run test:classification-ui` runs bundled Playwright/Chrome against a temporary Next app importing the **real production components**, with explicit browser-only synthetic/persisted local fixtures. It never connects to Supabase, modifies a production route, or ships fixture data into the app. This is UI verification, not hosted persistence/timer/ownership acceptance. The runner removes its own temporary app and junction afterward. The native browser tool still fails during Windows sandbox setup; no authenticated hosted session/database-management connection is available, so no M4 hosted item was closed or migration applied.
+
+Apply both pending migrations in order and finish the hosted acceptance checklists before calling M4/M4.5 fully accepted. Classification work previously deferred by M4 is now implemented here. Analytics snapshots, course scheduling/semesters/grades, reading, calendar/LMS integration, AI/ML, offline/realtime behavior and full Settings remain outside this milestone. Next product milestone: **Milestone 5 Reading Tracker**, followed by Milestone 6 Analytics using these classification IDs.
+
+---
+
 ## Milestone 4 — Deterministic duration estimation — implemented, hosted acceptance pending 2026-10-03
 
-The authorized scope is persisted task/session history → deterministic prediction → effective estimate → Momentum/Today/Week. Task 10 below describes the implemented hierarchy; the older course/task-type hierarchy is explicitly deferred.
+The authorized scope was persisted task/session history → deterministic prediction → effective estimate → Momentum/Today/Week. M4 originally used category/global matching; its course/task-type deferral was implemented in Milestone 4.5 above. The mathematical and manual-precedence decisions below remain in effect.
 
 ### Verified implementation
 
@@ -33,7 +76,7 @@ The authorized scope is persisted task/session history → deterministic predict
 
 ### Durable design decisions
 
-- Classification: category ID is the most specific implemented field. Require three usable same-category observations; otherwise require three globally. Courses/task types do not exist. Preserve course+type, course, category+type, and type matching as a later classification prerequisite before course/type analytics in Milestone 6; do not add those systems in M4.
+- Classification at M4 delivery: category → global with three usable observations. The deferred course/type dimensions and fuller hierarchy are now implemented in Milestone 4.5 above; they were not part of the original M4 commit.
 - Parameters live in `lib/estimation/duration-estimation.ts`: minimum 3, newest 20 matching tasks, newest weight N down to oldest weight 1, sum(minutes × weight)/sum(weights). Rank uses completedAt descending, then task ID to resolve ties, without the current clock. Round to nearest 5 minutes (half up), floor 5 minutes. Do not cap real multi-session task totals at the manual-entry limit.
 - Confidence is heuristic, never a probability: fallback/global low; category 3–7 medium; category 8–20 high. Count only usable observations, and never label broader global history high confidence.
 - Eligibility: current status completed, valid completedAt, positive finite summed duration from ended non-void sessions with valid increasing timestamps and positive finite generated durationSeconds. Exclude zero/invalid sessions, active sessions, and any task with a non-void active session. Include completed soft-deleted tasks and archived category relationships. Exclude reopened tasks until recompleted; recompletion uses the entire retained eligible ledger and latest completion timestamp. Exclude the target itself. Session corrections/voids affect the next derivation.
@@ -689,8 +732,8 @@ Implement:
 - [x] Reopen task.
 - [x] Archive/delete task behavior.
 - [x] Assign category.
-- [ ] Assign course.
-- [ ] Assign task type.
+- [x] Assign course (M4.5; hosted acceptance pending).
+- [x] Assign task type (M4.5; hosted acceptance pending).
 - [x] Assign priority.
 - [ ] Assign due date/time.
 - [x] Assign scheduled date.
@@ -819,11 +862,15 @@ lib/estimation/
 
 Matching hierarchy:
 
-1. same category (minimum three usable completed timed tasks)
-2. general completed-task history (minimum three)
-3. no prediction; effective estimate uses manual or 25-minute default
+1. same course + task type
+2. same course
+3. same category + task type
+4. same task type
+5. same category
+6. general completed-task history
+7. no prediction; effective estimate uses manual or 25-minute default
 
-Course+task-type, course, category+task-type, and task-type levels are deferred until those classification fields are implemented, before Milestone 6 course/type analytics. Manual override takes precedence over every prediction level.
+All levels are implemented by M4.5 and require at least three eligible observations. Manual override takes precedence over every prediction level. Missing classifications skip their corresponding levels.
 
 Required:
 
@@ -843,6 +890,10 @@ type DurationPrediction = {
   confidence: "low" | "medium" | "high"
   sampleSize: number
   source:
+    | "course_task_type"
+    | "course"
+    | "category_task_type"
+    | "task_type"
     | "category"
     | "global"
     | "fallback"
@@ -860,6 +911,8 @@ type DurationPrediction = {
 ### Implementation Notes
 
 2026-10-03: Pure estimator, nullable manual override, retained task history, shared Momentum/Today/Week calculations, and compact estimate details implemented. Algorithm, eligibility, parameters, tests, migration instructions, and pending hosted/browser acceptance are recorded in Milestone 4 above. Do not mark M4 fully accepted until those pending checks pass.
+
+2026-10-03: M4.5 adds independent course/task-type records and all comparison levels without changing estimation mathematics or effective-estimate precedence. See the M4.5 ledger for local SQL/browser evidence and remaining hosted acceptance.
 
 ---
 

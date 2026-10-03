@@ -94,6 +94,7 @@ test("PostgreSQL timers: lifecycle, retries, switch consent, corrections, comple
       "202609290001_milestone2.sql",
       "202609300001_time_sessions.sql",
       "202610030001_optional_manual_estimate.sql",
+      "202610030002_task_classification.sql",
     ])
       await db.exec(
         await readFile(

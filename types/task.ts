@@ -5,7 +5,10 @@ export type SortMode = "momentum" | "priority" | "deadline";
 
 export interface TaskInput {
   title: string;
-  categoryId: string;
+  categoryId: string | null;
+  // Optional at the legacy import boundary; persisted rows normalize to null.
+  courseId?: string | null;
+  taskTypeId?: string | null;
   priority: Priority;
   dueDate: string | null;
   scheduledDate: string;

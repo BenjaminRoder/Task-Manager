@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { CategoryManager } from "@/components/categories/category-manager";
+import { ClassificationManager } from "@/components/classification/classification-manager";
 import { useTasks } from "@/lib/tasks/use-tasks";
 import {
   addCalendarDays,
@@ -15,7 +16,7 @@ import { TaskRow } from "./task-row";
 import { WeekCalendar } from "./week-calendar";
 
 export function WeekBoard() {
-  const { tasks, predictions, estimationReady, categories, ready, busy, error, today, refresh, mutate } =
+  const { tasks, predictions, estimationReady, categories, courses, taskTypes, ready, busy, error, today, refresh, mutate } =
     useTasks();
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -109,6 +110,13 @@ export function WeekBoard() {
               )
             }
           />
+          <ClassificationManager courses={courses} taskTypes={taskTypes} disabled={busy}
+            onCreateCourse={(input) => mutate((_tasks, _categories, repository) => repository.create(input))}
+            onUpdateCourse={(id, input) => mutate((_tasks, _categories, repository) => repository.update(id, input))}
+            onArchiveCourse={(id, archived) => mutate((_tasks, _categories, repository) => repository.setArchived(id, archived))}
+            onCreateTaskType={(input) => mutate((_tasks, _categories, _courses, repository) => repository.create(input))}
+            onUpdateTaskType={(id, input) => mutate((_tasks, _categories, _courses, repository) => repository.update(id, input))}
+            onArchiveTaskType={(id, archived) => mutate((_tasks, _categories, _courses, repository) => repository.setArchived(id, archived))} />
           <div ref={editor}>
             {editing ? (
               <section className="week-editor" aria-label="Edit calendar task">
@@ -117,6 +125,8 @@ export function WeekBoard() {
                   task={editing}
                   today={today}
                   categories={categories}
+                  courses={courses}
+                  taskTypes={taskTypes}
                   disabled={busy}
                   onCancel={() => setEditingId(null)}
                   onSave={async (input) => {
@@ -135,7 +145,9 @@ export function WeekBoard() {
                   prediction={predictions?.get(editing.id)}
                   category={categories.find(
                     (category) => category.id === editing.categoryId,
-                  )!}
+                  )}
+                  course={courses.find((course) => course.id === editing.courseId)}
+                  taskType={taskTypes.find((type) => type.id === editing.taskTypeId)}
                   today={today}
                   busy={busy}
                   onEdit={() => editor.current?.querySelector("input")?.focus()}
@@ -179,6 +191,8 @@ export function WeekBoard() {
             estimationReady={estimationReady}
             today={today}
             categories={categories}
+            courses={courses}
+            taskTypes={taskTypes}
             disabled={busy}
             onEdit={(task) => {
               setEditingId(task.id);

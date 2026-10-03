@@ -8,11 +8,15 @@ import { CategoryBadge } from "@/components/categories/category-badge";
 import { formatDate } from "@/lib/tasks/task-rules";
 import { EstimateDetails } from "./estimate-details";
 import type { DurationPrediction } from "@/lib/estimation/duration-estimation";
+import type { Course } from "@/types/course";
+import type { TaskType } from "@/types/task-type";
 
 interface TaskRowProps {
   task: Task;
   prediction?: DurationPrediction;
-  category: Category;
+  category?: Category;
+  course?: Course;
+  taskType?: TaskType;
   today: string;
   busy: boolean;
   onToggle: () => void;
@@ -24,6 +28,8 @@ export function TaskRow({
   task,
   prediction,
   category,
+  course,
+  taskType,
   today,
   busy,
   onToggle,
@@ -51,7 +57,9 @@ export function TaskRow({
         <div className="task-copy">
           <h3>{task.title}</h3>
           <div className="task-meta">
-            <CategoryBadge category={category} />
+            {category ? <CategoryBadge category={category} /> : <span>No category</span>}
+            {course ? <span>{course.code ? `${course.code} · ` : ""}{course.name}{course.archivedAt ? " (archived)" : ""}</span> : null}
+            {taskType ? <span>{taskType.name}{taskType.archivedAt ? " (archived)" : ""}</span> : null}
             <span className={`priority priority-${task.priority}`}>
               {task.priority}
             </span>
@@ -67,7 +75,7 @@ export function TaskRow({
             {complete ? <span>Completed</span> : null}
           </div>
         </div>
-        <EstimateDetails task={task} prediction={prediction} />
+        <EstimateDetails task={task} prediction={prediction} labels={{ category: category?.name, course: course?.code || course?.name, taskType: taskType?.name }} />
         <div className="row-actions">
           <button
             type="button"

@@ -5,11 +5,18 @@ import type { TaskRepository } from "../tasks/task-repository.ts";
 import type { CategoryRepository } from "../categories/category-repository.ts";
 import { validateTask } from "../tasks/task-rules.ts";
 import { validateCategory } from "../categories/category-rules.ts";
+import type { CourseRepository } from "../classification/course-repository.ts";
+import type { TaskTypeRepository } from "../classification/task-type-repository.ts";
+import { validateCourse, validateTaskType } from "../classification/classification-rules.ts";
+import type { Course } from "../../types/course.ts";
+import type { TaskType } from "../../types/task-type.ts";
 
 export type TaskRow = {
   id: string;
   title: string;
-  category_id: string;
+  category_id: string | null;
+  course_id?: string | null;
+  task_type_id?: string | null;
   priority: Task["priority"];
   due_date: string | null;
   scheduled_date: string;
@@ -25,11 +32,29 @@ export type CategoryRow = {
   color: string;
   archived_at: string | null;
 };
+export type TaskTypeRow = {
+  id: string;
+  name: string;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type CourseRow = TaskTypeRow & { code: string | null };
+
+export function taskTypeFromRow(row: TaskTypeRow): TaskType {
+  return { id: row.id, name: row.name, archivedAt: row.archived_at,
+    createdAt: row.created_at, updatedAt: row.updated_at };
+}
+export function courseFromRow(row: CourseRow): Course {
+  return { ...taskTypeFromRow(row), code: row.code };
+}
 export function taskFromRow(row: TaskRow): Task {
   return {
     id: row.id,
     title: row.title,
     categoryId: row.category_id,
+    courseId: row.course_id ?? null,
+    taskTypeId: row.task_type_id ?? null,
     priority: row.priority,
     dueDate: row.due_date,
     scheduledDate: row.scheduled_date,
@@ -45,6 +70,8 @@ export function taskFields(input: TaskInput) {
   return {
     title: value.title,
     category_id: value.categoryId,
+    course_id: value.courseId,
+    task_type_id: value.taskTypeId,
     priority: value.priority,
     due_date: value.dueDate,
     scheduled_date: value.scheduledDate,
@@ -65,7 +92,7 @@ export function databaseError(
   if (!error) return;
   if (error.code === "23505")
     throw new Error(
-      "A category name or record ID already exists in your account. No conflicting data was overwritten. If importing, resolve the conflict before retrying.",
+      "A classification name or record ID already exists in your account. No conflicting data was overwritten. If importing, resolve the conflict before retrying.",
     );
   throw new Error(
     `Could not save or load cloud data: ${error.message}. Check your connection and sign in again if your session expired.`,
@@ -78,6 +105,8 @@ export function createSupabaseRepositories(
 ): {
   tasks: TaskRepository;
   categories: CategoryRepository;
+  courses: CourseRepository;
+  taskTypes: TaskTypeRepository;
 } {
   // Pin this repository to one account. Never let an in-flight old-account action
   // write into a newly signed-in account, even when browser auth changes tabs.
@@ -89,7 +118,7 @@ export function createSupabaseRepositories(
       );
   }
   async function update(
-    table: "tasks" | "categories",
+    table: "tasks" | "categories" | "courses" | "task_types",
     id: string,
     fields: Record<string, unknown>,
   ) {
@@ -107,9 +136,9 @@ export function createSupabaseRepositories(
         "This record is no longer available. Refresh and try again.",
       );
   }
-  async function list(table: "tasks" | "categories", includeDeleted = false) {
+  async function list(table: "tasks" | "categories" | "courses" | "task_types", includeDeleted = false) {
     await authorize();
-    const rows: (TaskRow | CategoryRow)[] = [];
+    const rows: (TaskRow | CategoryRow | CourseRow | TaskTypeRow)[] = [];
     // PostgREST defaults to a 1,000-row cap. Page explicitly to retain history.
     for (let start = 0; ; start += 500) {
       let query = client
@@ -175,6 +204,40 @@ export function createSupabaseRepositories(
         await update("categories", id, {
           archived_at: archived ? new Date().toISOString() : null,
         });
+      },
+    },
+    courses: {
+      async list() {
+        return ((await list("courses")) as CourseRow[]).map(courseFromRow);
+      },
+      async create(input) {
+        const fields = validateCourse(input);
+        await authorize();
+        const { error } = await client.from("courses").insert({ ...fields, user_id: userId });
+        databaseError(error);
+      },
+      async update(id, input) {
+        await update("courses", id, { ...validateCourse(input) });
+      },
+      async setArchived(id, archived) {
+        await update("courses", id, { archived_at: archived ? new Date().toISOString() : null });
+      },
+    },
+    taskTypes: {
+      async list() {
+        return ((await list("task_types")) as TaskTypeRow[]).map(taskTypeFromRow);
+      },
+      async create(input) {
+        const fields = validateTaskType(input);
+        await authorize();
+        const { error } = await client.from("task_types").insert({ ...fields, user_id: userId });
+        databaseError(error);
+      },
+      async update(id, input) {
+        await update("task_types", id, { ...validateTaskType(input) });
+      },
+      async setArchived(id, archived) {
+        await update("task_types", id, { archived_at: archived ? new Date().toISOString() : null });
       },
     },
   };

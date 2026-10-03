@@ -6,6 +6,8 @@ import type { WeekDay } from "@/lib/tasks/week-rules";
 import { formatDate, formatDuration } from "@/lib/tasks/task-rules";
 import { CategoryBadge } from "@/components/categories/category-badge";
 import { effectiveEstimate, type Predictions } from "@/lib/estimation/duration-estimation";
+import type { Course } from "@/types/course";
+import type { TaskType } from "@/types/task-type";
 
 interface WeekCalendarProps {
   days: WeekDay[];
@@ -13,6 +15,8 @@ interface WeekCalendarProps {
   estimationReady: boolean;
   today: string;
   categories: Category[];
+  courses: Course[];
+  taskTypes: TaskType[];
   disabled: boolean;
   onEdit: (task: Task) => void;
 }
@@ -23,6 +27,8 @@ export function WeekCalendar({
   estimationReady,
   today,
   categories,
+  courses,
+  taskTypes,
   disabled,
   onEdit,
 }: WeekCalendarProps) {
@@ -83,17 +89,16 @@ export function WeekCalendar({
                       type="button"
                       className={`week-task${task.status === "completed" ? " week-task-completed" : ""}`}
                       style={{
-                        borderLeftColor: categoryById.get(task.categoryId)!
-                          .color,
+                        borderLeftColor: task.categoryId ? categoryById.get(task.categoryId)?.color : undefined,
                       }}
                       disabled={disabled}
                       aria-label={`Edit ${task.title}`}
                       onClick={() => onEdit(task)}
                     >
                       <span className="week-task-title">{task.title}</span>
-                      <CategoryBadge
-                        category={categoryById.get(task.categoryId)!}
-                      />
+                      {task.categoryId && categoryById.get(task.categoryId) ? <CategoryBadge category={categoryById.get(task.categoryId)!} /> : <span>No category</span>}
+                      {task.courseId ? <span>{courses.find((course) => course.id === task.courseId)?.code || courses.find((course) => course.id === task.courseId)?.name}</span> : null}
+                      {task.taskTypeId ? <span>{taskTypes.find((type) => type.id === task.taskTypeId)?.name}</span> : null}
                       <span className="week-task-details">
                         <span>{estimationReady || task.estimatedMinutes !== null ? formatDuration(effectiveEstimate(task, predictions?.get(task.id))) : "History unavailable"}</span>
                         <span className={`priority priority-${task.priority}`}>

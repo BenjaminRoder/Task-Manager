@@ -43,7 +43,7 @@ function hasTaskMetadata(value: Record<string, unknown>): boolean {
 function isTask(value: unknown): value is Task {
   if (!value || typeof value !== "object") return false;
   const task = value as Record<string, unknown>;
-  if (!hasTaskMetadata(task) || typeof task.categoryId !== "string")
+  if (!hasTaskMetadata(task) || (task.categoryId !== null && typeof task.categoryId !== "string") || task.courseId != null || task.taskTypeId != null)
     return false;
   try {
     validateTask(value as Task);
@@ -91,7 +91,7 @@ export function validateStoredData(value: unknown): LocalData {
     throw new Error("Invalid records");
   const categoryIds = new Set(data.categories.map((category) => category.id));
   if (
-    data.tasks.some((task) => !categoryIds.has(task.categoryId)) ||
+    data.tasks.some((task) => task.categoryId !== null && !categoryIds.has(task.categoryId)) ||
     new Set(data.categories.map((category) => categoryNameKey(category.name)))
       .size !== data.categories.length
   ) {
