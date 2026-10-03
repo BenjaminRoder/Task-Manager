@@ -15,8 +15,10 @@ import type { TaskType } from "@/types/task-type";
 import type { TimeSession } from "@/types/time-session";
 import type { TimeSessionRepository } from "@/lib/timers/time-session-repository";
 
+import type { Topic } from "@/types/topic";
+
 interface FixtureData {
-  tasks: Task[]; categories: Category[]; courses: Course[]; taskTypes: TaskType[]; sessions: TimeSession[];
+  topics: Topic[]; tasks: Task[]; categories: Category[]; courses: Course[]; taskTypes: TaskType[]; sessions: TimeSession[];
 }
 const key = "task-manager.classification.ui.fixture.v1";
 function read(): FixtureData {
@@ -30,6 +32,7 @@ function read(): FixtureData {
   }));
   const data: FixtureData = {
     tasks,
+    topics: [],
     categories: [{ id: "school", name: "School", color: "#23624c", archivedAt: null }],
     courses: [{ id: "acct", name: "Accounting", code: "ACCT 151", archivedAt: null, createdAt: "2026-01-01", updatedAt: "2026-01-01" }],
     taskTypes: [{ id: "hw", name: "Homework", archivedAt: null, createdAt: "2026-01-01", updatedAt: "2026-01-01" }],
@@ -68,6 +71,12 @@ export default function ClassificationFixture() {
       async create(input: Pick<Course, "name"> & { code?: string | null }) { const data = read(); data.courses.push({ ...input, code: input.code ?? null, id: crypto.randomUUID(), archivedAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); write(data); },
       async update(id: string, input: Pick<Course, "name"> & { code?: string | null }) { const data = read(); Object.assign(data.courses.find((row) => row.id === id)!, input); write(data); },
       async setArchived(id: string, archived: boolean) { const data = read(); data.courses.find((row) => row.id === id)!.archivedAt = archived ? new Date().toISOString() : null; write(data); },
+    },
+    topics: {
+      async list() { return read().topics; },
+      async create(input: Pick<Topic, "name">) { const data = read(); data.topics.push({ ...input, id: crypto.randomUUID(), archivedAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); write(data); },
+      async update(id: string, input: Pick<Topic, "name">) { const data = read(); Object.assign(data.topics.find((row) => row.id === id)!, input); write(data); },
+      async setArchived(id: string, archived: boolean) { const data = read(); data.topics.find((row) => row.id === id)!.archivedAt = archived ? new Date().toISOString() : null; write(data); },
     },
     taskTypes: {
       async list() { return read().taskTypes; },

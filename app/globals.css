@@ -1110,3 +1110,9 @@ details.task-duration p {
   .timer-controls button { padding: .55rem .65rem; }
   .active-timer-bar { padding: .75rem; }
 }
+
+.topic-selectors { margin-top: .75rem; }
+.topic-options { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding: .75rem 0; max-height: 12rem; overflow-y: auto; }
+.topic-options label { display: inline-flex; align-items: center; gap: .4rem; overflow-wrap: anywhere; }
+.topic-options input { width: 1rem; height: 1rem; flex-shrink: 0; }
+.topic-badge { border: 1px solid #d5dfd9; border-radius: .4rem; padding: .1rem .4rem; overflow-wrap: anywhere; }

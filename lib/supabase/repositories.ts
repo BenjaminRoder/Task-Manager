@@ -11,7 +11,11 @@ import { validateCourse, validateTaskType } from "../classification/classificati
 import type { Course } from "../../types/course.ts";
 import type { TaskType } from "../../types/task-type.ts";
 
+import type { TopicRepository } from "../classification/topic-repository.ts";
+import { validateTopic, validateTopicIds } from "../classification/topic-rules.ts";
+
 export type TaskRow = {
+  task_topics?: { topic_id: string }[];
   id: string;
   title: string;
   category_id: string | null;
@@ -55,6 +59,7 @@ export function taskFromRow(row: TaskRow): Task {
     categoryId: row.category_id,
     courseId: row.course_id ?? null,
     taskTypeId: row.task_type_id ?? null,
+    topicIds: (row.task_topics ?? []).map((link) => link.topic_id),
     priority: row.priority,
     dueDate: row.due_date,
     scheduledDate: row.scheduled_date,
@@ -107,6 +112,7 @@ export function createSupabaseRepositories(
   categories: CategoryRepository;
   courses: CourseRepository;
   taskTypes: TaskTypeRepository;
+  topics: TopicRepository;
 } {
   // Pin this repository to one account. Never let an in-flight old-account action
   // write into a newly signed-in account, even when browser auth changes tabs.
@@ -118,7 +124,7 @@ export function createSupabaseRepositories(
       );
   }
   async function update(
-    table: "tasks" | "categories" | "courses" | "task_types",
+    table: "tasks" | "categories" | "courses" | "task_types" | "topics",
     id: string,
     fields: Record<string, unknown>,
   ) {
@@ -136,31 +142,50 @@ export function createSupabaseRepositories(
         "This record is no longer available. Refresh and try again.",
       );
   }
-  async function list(table: "tasks" | "categories" | "courses" | "task_types", includeDeleted = false) {
+  async function list(table: "tasks" | "categories" | "courses" | "task_types" | "topics", includeDeleted = false) {
     await authorize();
     const rows: (TaskRow | CategoryRow | CourseRow | TaskTypeRow)[] = [];
     // PostgREST defaults to a 1,000-row cap. Page explicitly to retain history.
     for (let start = 0; ; start += 500) {
       let query = client
         .from(table)
-        .select("*")
+        .select(table === "tasks" ? "*,task_topics(topic_id)" : "*")
         .eq("user_id", userId)
         .order("id")
         .range(start, start + 499);
       if (table === "tasks" && !includeDeleted) query = query.is("deleted_at", null);
-      const { data, error } = await query;
+      const { data, error } = await query.returns<(TaskRow | CategoryRow | CourseRow | TaskTypeRow)[]>();
       databaseError(error);
       rows.push(...(data ?? []));
       if (!data || data.length < 500) break;
     }
     return rows;
   }
+  async function saveWithTopics(id: string | null, input: TaskInput) {
+    const fields = taskFields(input);
+    const ids = validateTopicIds(input.topicIds ?? []);
+    await authorize();
+    const { error } = await client.rpc("save_task_with_topics", { p_task_id: id, p_fields: fields, p_topic_ids: ids, expected_user_id: userId });
+    databaseError(error);
+  }
   return {
+    topics: {
+      async list() { return ((await list("topics")) as TaskTypeRow[]).map(taskTypeFromRow); },
+      async create(input) {
+        const fields = validateTopic(input);
+        await authorize();
+        const { error } = await client.from("topics").insert({ ...fields, user_id: userId });
+        databaseError(error);
+      },
+      async update(id, input) { await update("topics", id, { ...validateTopic(input) }); },
+      async setArchived(id, archived) { await update("topics", id, { archived_at: archived ? new Date().toISOString() : null }); },
+    },
     tasks: {
       async list(includeDeleted = false) {
         return ((await list("tasks", includeDeleted)) as TaskRow[]).map(taskFromRow);
       },
       async create(input) {
+        if (input.topicIds?.length) return saveWithTopics(null, input);
         const fields = taskFields(input);
         await authorize();
         // Ownership is checked against Auth above and again by database RLS.
@@ -170,6 +195,7 @@ export function createSupabaseRepositories(
         databaseError(error);
       },
       async update(id, input) {
+        if (input.topicIds !== undefined) return saveWithTopics(id, input);
         await update("tasks", id, taskFields(input));
       },
       async setStatus(id, status) {

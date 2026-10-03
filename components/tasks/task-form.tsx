@@ -13,12 +13,15 @@ import { estimationRules } from "@/lib/estimation/duration-estimation";
 import type { Course } from "@/types/course";
 import type { TaskType } from "@/types/task-type";
 
+import type { Topic } from "@/types/topic";
+
 interface TaskFormProps {
   task?: Task;
   today: string;
   categories: Category[];
   courses: Course[];
   taskTypes: TaskType[];
+  topics: Topic[];
   disabled: boolean;
   onSave: (input: TaskInput) => Promise<boolean>;
   onCancel?: () => void;
@@ -30,6 +33,7 @@ export function TaskForm({
   categories,
   courses,
   taskTypes,
+  topics,
   disabled,
   onSave,
   onCancel,
@@ -52,6 +56,7 @@ export function TaskForm({
         categoryId: String(data.get("categoryId") ?? "") || null,
         courseId: String(data.get("courseId") ?? "") || null,
         taskTypeId: String(data.get("taskTypeId") ?? "") || null,
+        topicIds: data.getAll("topicIds").map(String),
         priority: String(data.get("priority")) as Priority,
         estimatedMinutes: String(data.get("estimatedMinutes") ?? "").trim() === "" ? null : Number(data.get("estimatedMinutes")),
         dueDate: String(data.get("dueDate") ?? "") || null,
@@ -192,6 +197,17 @@ export function TaskForm({
               </select>
             </label>
           </div>
+        </details>
+        <details className="topic-selectors" open={!!task?.topicIds?.length}>
+          <summary>Topics (optional)</summary>
+          <div className="topic-options" role="group" aria-label="Task topics">
+            {topics.filter((topic) => !topic.archivedAt || task?.topicIds?.includes(topic.id)).map((topic) => (
+              <label key={topic.id}><input type="checkbox" name="topicIds" value={topic.id} defaultChecked={task?.topicIds?.includes(topic.id) ?? false} />
+                {topic.name}{topic.archivedAt ? " (archived)" : ""}
+              </label>
+            ))}
+          </div>
+          {!topics.some((topic) => !topic.archivedAt) ? <p className="category-help">Create or restore a topic using Manage topics above.</p> : null}
         </details>
       </fieldset>
       <p className="category-help">Leave the manual estimate blank to use history, or {estimationRules.defaultMinutes} min until enough history exists. A manual estimate overrides the prediction.</p>

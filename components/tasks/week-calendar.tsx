@@ -9,6 +9,8 @@ import { effectiveEstimate, type Predictions } from "@/lib/estimation/duration-e
 import type { Course } from "@/types/course";
 import type { TaskType } from "@/types/task-type";
 
+import type { Topic } from "@/types/topic";
+
 interface WeekCalendarProps {
   days: WeekDay[];
   predictions?: Predictions;
@@ -17,6 +19,7 @@ interface WeekCalendarProps {
   categories: Category[];
   courses: Course[];
   taskTypes: TaskType[];
+  topics: Topic[];
   disabled: boolean;
   onEdit: (task: Task) => void;
 }
@@ -29,6 +32,7 @@ export function WeekCalendar({
   categories,
   courses,
   taskTypes,
+  topics,
   disabled,
   onEdit,
 }: WeekCalendarProps) {
@@ -99,6 +103,7 @@ export function WeekCalendar({
                       {task.categoryId && categoryById.get(task.categoryId) ? <CategoryBadge category={categoryById.get(task.categoryId)!} /> : <span>No category</span>}
                       {task.courseId ? <span>{courses.find((course) => course.id === task.courseId)?.code || courses.find((course) => course.id === task.courseId)?.name}</span> : null}
                       {task.taskTypeId ? <span>{taskTypes.find((type) => type.id === task.taskTypeId)?.name}</span> : null}
+                      {topics.filter((topic) => task.topicIds?.includes(topic.id)).map((topic) => <span className="topic-badge" key={topic.id}>{topic.name}{topic.archivedAt ? " (archived)" : ""}</span>)}
                       <span className="week-task-details">
                         <span>{estimationReady || task.estimatedMinutes !== null ? formatDuration(effectiveEstimate(task, predictions?.get(task.id))) : "History unavailable"}</span>
                         <span className={`priority priority-${task.priority}`}>

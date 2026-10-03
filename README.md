@@ -1,13 +1,13 @@
 # Personal Task Manager
 
-Private task management with Today, Tasks, Week, custom color categories, optional courses and task types, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers, correctable session history, and deterministic duration estimation are implemented. M4/M4.5 hosted acceptance is pending. Analytics, reading, and calendar integration remain deferred.
+Private task management with Today, Tasks, Week, custom color categories, optional courses and task types, customizable topics, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers, correctable session history, and deterministic duration estimation are implemented. M4/M4.5/M4.6 hosted acceptance is pending. Analytics, reading, and calendar integration remain deferred.
 
 See [BUILD_PLAN.md](BUILD_PLAN.md), [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), and [AGENTS.md](AGENTS.md).
 
 ## Set up Supabase (one time)
 
 1. Create a project at https://supabase.com/dashboard. Keep its database password private.
-2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. Then run `supabase/migrations/202609300001_time_sessions.sql`, `supabase/migrations/202610030001_optional_manual_estimate.sql`, and `supabase/migrations/202610030002_task_classification.sql` once each, in that order. These create the owned records, constraints, indexes, triggers, RLS policies and RPCs, allow blank manual estimates, and add optional classification references. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
+2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. Then run `supabase/migrations/202609300001_time_sessions.sql`, `supabase/migrations/202610030001_optional_manual_estimate.sql`, `supabase/migrations/202610030002_task_classification.sql`, and `supabase/migrations/202610030003_task_topics.sql` once each, in that order. These create the owned records, constraints, indexes, triggers, RLS policies and RPCs, allow blank manual estimates, and add optional classification references. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
 
 3. In **Authentication → Sign In / Providers**, enable Email/password. Disable public signups for this private application. Under **Authentication → Users → Add user → Create new user**, create your email/password account and mark the email confirmed. There is intentionally no public registration or password-reset UI; manage the private account in the dashboard.
 4. Copy the project URL and **publishable** API key from the project's Connect/API settings. Never use a secret or service-role key. Create `.env.local` in the inner repository (next to `package.json`):
@@ -146,3 +146,12 @@ Task capture now works with a title alone: dates/priority retain defaults, categ
 Local verification: **57 passing automated tests**, lint/typecheck/production build, actual four-migration PostgreSQL ownership/archive/reclassification/timer regressions, and an isolated real-component browser fixture. The fixture verifies all hierarchy levels, capture/editing, management/archives, manual override, shared Momentum/Today/Week estimates, refresh, timer UI, and 320px layouts using synthetic local data. It is not hosted Supabase acceptance.
 
 Run the browser fixture with `npm run test:classification-ui`. It requires installed Chrome and Playwright; the bundled Codex runtime is used by default, or set `PLAYWRIGHT_MODULE` to an installed Playwright module path. The runner creates a temporary Next app and removes it afterward; no fixture route or seeded data ships with production. Hosted migration application, authenticated persistence/timer flows, and hosted ownership acceptance remain unchecked in BUILD_PLAN.md. Finish those, then proceed to Milestone 5 Reading Tracker and Milestone 6 Analytics.
+
+
+## M4.6 Topics/Tags
+
+Topics describe specific subject matter and support zero/multiple assignments per task. Use **Manage topics** on Today, Tasks or Week to create, rename, archive or restore a topic; expand **Topics (optional)** in task capture/editing to select or remove assignments. Archives keep labels on existing/completed tasks and exclude new assignments. Topics do not affect estimates, Momentum, workload or timers.
+
+Apply pending M4, M4.5 and then `supabase/migrations/202610030003_task_topics.sql` once, in order, using authenticated SQL Editor or a correctly linked/tracked CLI. This migration adds owned `topics`, the compound-owner `task_topics` join and atomic `save_task_with_topics` RPC. Existing tasks remain unchanged and start without topics. No new configuration is needed. All three migrations and authenticated hosted acceptance remain pending in this session; see BUILD_PLAN for evidence and release gates.
+
+`npm test` includes embedded PostgreSQL topic lifecycle/RLS/atomicity and behavioral regressions. `npm run test:classification-ui` also exercises topic management, multiple selection, archived historical labels, refresh, Week and narrow editing in an explicitly synthetic local UI fixture. These do not claim hosted verification.

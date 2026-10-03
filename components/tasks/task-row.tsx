@@ -11,12 +11,15 @@ import type { DurationPrediction } from "@/lib/estimation/duration-estimation";
 import type { Course } from "@/types/course";
 import type { TaskType } from "@/types/task-type";
 
+import type { Topic } from "@/types/topic";
+
 interface TaskRowProps {
   task: Task;
   prediction?: DurationPrediction;
   category?: Category;
   course?: Course;
   taskType?: TaskType;
+  topics: Topic[];
   today: string;
   busy: boolean;
   onToggle: () => void;
@@ -30,6 +33,7 @@ export function TaskRow({
   category,
   course,
   taskType,
+  topics,
   today,
   busy,
   onToggle,
@@ -60,6 +64,7 @@ export function TaskRow({
             {category ? <CategoryBadge category={category} /> : <span>No category</span>}
             {course ? <span>{course.code ? `${course.code} · ` : ""}{course.name}{course.archivedAt ? " (archived)" : ""}</span> : null}
             {taskType ? <span>{taskType.name}{taskType.archivedAt ? " (archived)" : ""}</span> : null}
+            {topics.filter((topic) => task.topicIds?.includes(topic.id)).map((topic) => <span className="topic-badge" key={topic.id}>{topic.name}{topic.archivedAt ? " (archived)" : ""}</span>)}
             <span className={`priority priority-${task.priority}`}>
               {task.priority}
             </span>

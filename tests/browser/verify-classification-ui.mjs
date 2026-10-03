@@ -42,6 +42,49 @@ try {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(url);
+  await page.getByText("Manage topics", { exact: true }).click();
+  const topicManager = page.locator("details").filter({ has: page.locator("summary", { hasText: /^Manage topics$/ }) });
+  for (const name of ["Adjusting Entries", "Chapter 8"]) {
+    await topicManager.getByLabel("Topic name", { exact: true }).fill(name);
+    await topicManager.getByRole("button", { name: "Create topic", exact: true }).click();
+    await topicManager.getByText(name, { exact: true }).waitFor();
+  }
+  const topicForm = () => page.getByRole("form", { name: "Add a task", exact: true });
+  await topicForm().getByText("Topics (optional)", { exact: true }).click();
+  await topicForm().getByLabel("Task title").fill("Tagged study");
+  await topicForm().getByLabel("Adjusting Entries", { exact: true }).check();
+  await topicForm().getByLabel("Chapter 8", { exact: true }).check();
+  const topicDate = await topicForm().getByLabel("Planned for").inputValue();
+  await topicForm().getByLabel("Due date (optional)").fill(topicDate);
+  await topicForm().getByRole("button", { name: "Add task", exact: true }).click();
+  const tagged = () => page.getByRole("article", { name: "Tagged study", exact: true });
+  await tagged().getByText("Chapter 8", { exact: true }).waitFor();
+  await page.reload();
+  await tagged().getByText("Adjusting Entries", { exact: true }).waitFor();
+  await page.getByText("Manage topics", { exact: true }).click();
+  await topicManager.getByRole("button", { name: "Edit topic Chapter 8", exact: true }).click();
+  await topicManager.getByLabel("Topic name", { exact: true }).fill("Chapter Eight");
+  await topicManager.getByRole("button", { name: "Save topic", exact: true }).click();
+  await tagged().getByText("Chapter Eight", { exact: true }).waitFor();
+  await topicManager.getByRole("button", { name: "Archive topic Chapter Eight", exact: true }).click();
+  await tagged().getByText("Chapter Eight (archived)", { exact: true }).waitFor();
+  assert.equal(await topicForm().getByLabel("Chapter Eight (archived)", { exact: true }).count(), 0);
+  await tagged().getByRole("checkbox", { name: "Complete Tagged study", exact: true }).click();
+  await tagged().getByText("Chapter Eight (archived)", { exact: true }).waitFor();
+  await page.setViewportSize({ width: 320, height: 900 });
+  await tagged().getByRole("button", { name: "Edit Tagged study", exact: true }).click();
+  const taggedEdit = page.getByRole("form", { name: "Edit Tagged study", exact: true });
+  assert.equal(await taggedEdit.getByLabel("Chapter Eight (archived)", { exact: true }).isChecked(), true);
+  await taggedEdit.getByLabel("Adjusting Entries", { exact: true }).uncheck();
+  await taggedEdit.getByRole("button", { name: "Save changes", exact: true }).click();
+  assert.equal(await tagged().getByText("Adjusting Entries", { exact: true }).count(), 0);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await topicManager.getByRole("button", { name: "Restore topic Chapter Eight", exact: true }).click();
+  await tagged().getByText("Chapter Eight", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Show Week fixture", exact: true }).click();
+  await page.getByRole("button", { name: "Edit Tagged study", exact: true }).getByText("Chapter Eight", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Show Today fixture", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const form = () => page.getByRole("form", { name: "Add a task", exact: true });
   await form().getByLabel("Task title").fill("Title only");
   await form().getByRole("button", { name: "Add task", exact: true }).click();
@@ -169,8 +212,9 @@ try {
   await form().getByRole("button", { name: "Add task", exact: true }).click();
   await page.getByRole("article", { name: "Mobile title-only task", exact: true }).waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await page.screenshot({ path: "C:/Users/jacku/.codex/visualizations/2026/10/03/01a1040d-5c19-7371-9a6a-5b493290f9eb/topics-mobile.png", fullPage: true });
   assert.deepEqual(errors, []);
-  console.log("PASS: local UI fixture — management, optional capture, all six hierarchy levels plus fallback, explanations, manual override, Momentum, Today/Week, archived references, refresh, timer UI and 320px creation/editing. No hosted claims.");
+  console.log("PASS: local UI fixture — topics lifecycle/multiple selection/history/refresh/Week/mobile; classification management, optional capture, all six hierarchy levels plus fallback, explanations, manual override, Momentum, Today/Week, archived references, refresh, timer UI and 320px creation/editing. No hosted claims.");
 } finally {
   if (browser) await browser.close();
   if (server) { server.kill(); await new Promise((resolve) => { if (server.exitCode !== null) resolve(); else server.once("exit", resolve); }); }

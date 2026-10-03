@@ -9,6 +9,8 @@ export interface TaskInput {
   // Optional at the legacy import boundary; persisted rows normalize to null.
   courseId?: string | null;
   taskTypeId?: string | null;
+  // Omitted at legacy boundaries; repository reads normalize to an empty array.
+  topicIds?: string[];
   priority: Priority;
   dueDate: string | null;
   scheduledDate: string;

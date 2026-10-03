@@ -12,6 +12,7 @@ import {
 import { TaskForm } from "./task-form";
 import { TaskRow } from "./task-row";
 import { CategoryManager } from "@/components/categories/category-manager";
+import { TopicManager } from "@/components/classification/topic-manager";
 import { ClassificationManager } from "@/components/classification/classification-manager";
 
 const sortDescriptions: Record<SortMode, string> = {
@@ -21,7 +22,7 @@ const sortDescriptions: Record<SortMode, string> = {
 };
 
 export function TaskBoard({ view }: { view: "today" | "all" }) {
-  const { tasks, predictions, estimationReady, categories, courses, taskTypes, ready, busy, error, today, refresh, mutate } =
+  const { tasks, predictions, estimationReady, categories, courses, taskTypes, topics, ready, busy, error, today, refresh, mutate } =
     useTasks();
   const [sort, setSort] = useState<SortMode>("momentum");
   const [editing, setEditing] = useState<Task | null>(null);
@@ -52,6 +53,7 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
       <TaskRow
         key={task.id}
         task={task}
+        topics={topics}
         prediction={predictions?.get(task.id)}
         category={task.categoryId ? categoryById.get(task.categoryId) : undefined}
         course={courses.find((course) => course.id === task.courseId)}
@@ -162,13 +164,17 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
               onCreateTaskType={(input) => mutate((_tasks, _categories, _courses, repository) => repository.create(input))}
               onUpdateTaskType={(id, input) => mutate((_tasks, _categories, _courses, repository) => repository.update(id, input))}
               onArchiveTaskType={(id, archived) => mutate((_tasks, _categories, _courses, repository) => repository.setArchived(id, archived))} />
+            <TopicManager topics={topics} disabled={busy}
+              onCreate={(input) => mutate((_t, _c, _co, _ty, repository) => repository.create(input))}
+              onUpdate={(id, input) => mutate((_t, _c, _co, _ty, repository) => repository.update(id, input))}
+              onArchive={(id, archived) => mutate((_t, _c, _co, _ty, repository) => repository.setArchived(id, archived))} />
             <TaskForm
               key={editing?.id ?? `new-${today}`}
               task={editing ?? undefined}
               today={today}
               categories={categories}
               courses={courses}
-              taskTypes={taskTypes}
+              taskTypes={taskTypes} topics={topics}
               disabled={busy}
               onCancel={editing ? () => setEditing(null) : undefined}
               onSave={async (input) => {

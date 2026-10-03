@@ -12,6 +12,40 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 4.6 — Topics/Tags — implemented; hosted acceptance pending 2026-10-03
+
+### Implemented and locally verified
+
+- [x] Custom user-owned topics: create, rename, archive and restore, stable IDs and timestamps.
+- [x] Zero/multiple topic assignments with intentional add/remove; completed and soft-deleted task associations survive archival and lifecycle changes.
+- [x] Backward-compatible migration; existing tasks have no associations and keep all prior fields.
+- [x] Compound ownership FKs, RLS, anonymous denial, immutable topic identities and archive assignment guard.
+- [x] Explicit TopicRepository, account-pinned paginated adapter, nested task association reads and atomic task/selection RPC; no component database queries.
+- [x] Collapsed optional checkbox selection plus adjacent topic management on Today/Tasks/Week; archived assigned topics remain labeled and editable.
+- [x] Topic-independent estimation, unchanged manual/prediction/fallback precedence, Momentum/workload and timer rules.
+- [x] 8 added automated tests; all 65 pass, including real embedded PostgreSQL/RLS/rollback tests and the existing timer suite with all five migrations.
+- [x] Lint, typecheck and production build pass.
+- [x] Desktop (1440px) and mobile (320px) browser fixture acceptance: topic create/rename/archive/restore, multiple selection/removal, retained completed/archived labels, refresh and Week cards; all prior hierarchy/Momentum/workload/timer UI regressions pass.
+- [ ] Hosted migration/ownership/persistence and authenticated browser acceptance for M4/M4.5/M4.6.
+
+### Topic semantics and architecture
+
+Category is a broad area; Course is academic context; Task Type is the kind of work; Topic is specific subject matter. Topics are independent, many-to-many structured data, and never enter the prediction hierarchy. Names are 1–60 characters and unique per account after case/outer-space normalization, including archived topics. Archives preserve historical links and current labels; unchanged archived selections are retained, new associations require an active topic, and users may deliberately remove a historical association. Renames update display everywhere without changing IDs. No hard delete of topics is granted.
+
+Migration `202610030003_task_topics.sql` adds `topics`, `task_topics`, owner policies/indexes/FKs, guarded new assignment and invoker-security `save_task_with_topics`. Task fields and explicit selection are saved in one transaction; failed new references roll back both. Current associations are retained rather than replaced, protecting archived links. Parent-task locks serialize RPC edits, and topic row locks serialize new assignment with archive. Ordinary status/deletion/timer operations do not touch links. Omitted topic IDs at legacy repository boundaries preserve existing links; cloud reads normalize no links to []. Legacy recovery rejects unsupported topic-bearing snapshots rather than silently dropping their relationships.
+
+### Hosted status and checkpoint audit
+
+Only public Supabase URL/publishable-key configuration is available. No database-management connector, CLI auth token or database credential was found. Browser-session inventory also failed at Windows sandbox initialization. Therefore no hosted migration or authenticated acceptance was performed, and no hosted data changed. Apply M4 `202610030001_optional_manual_estimate.sql`, M4.5 `202610030002_task_classification.sql`, then M4.6 `202610030003_task_topics.sql` in order; do not rerun already-applied M2/M3 migrations. Local PostgreSQL verification is separate from hosted verification.
+
+Browser evidence: `npm run test:classification-ui` passed using bundled Playwright/Chrome and real production components in the isolated synthetic fixture. The final 320px screenshot was reviewed; no document overflow or page errors occurred. Browser testing caught duplicate Week badges, which were corrected before the full successful rerun. This validates UI behavior, not hosted persistence.
+
+The audit found stale lower checklist flags for the implemented Today timer and estimator/session tests; those are reconciled to existing/new test evidence. Historical milestone entries remain dated records; this ledger is current status. Outstanding V1 requirements remain explicit: deadline time, notes/description, manual ordering, separate overdue section, completed workload summary, reading, analytics/snapshots and full History, resilience/accessibility/security review, deployment and final hosted acceptance. Inline topic creation is deferred in favor of the existing adjacent classification-manager pattern; task capture stays compact. No Reading/Analytics/History/calendar/AI feature was started.
+
+The codebase is ready to begin **M5 Reading Tracker** development after this local checkpoint, with hosted M4/M4.5/M4.6 acceptance still an open release gate. M6 Analytics and M7 hardening/final acceptance remain pending; this milestone does not imply V1 completion.
+
+---
+
 ## Milestone 4.5 — Task classification and full estimation hierarchy — implemented, hosted acceptance pending 2026-10-03
 
 ### Verified implementation and local acceptance
@@ -767,7 +801,7 @@ Required sections:
 - [x] Total estimated workload.
 - [ ] Completed workload.
 - [x] Remaining workload.
-- [ ] Start timer control.
+- [x] Start timer control.
 - [x] Complete task control.
 - [x] Sorting selector.
 
@@ -804,7 +838,7 @@ Shortest first.
 
 ### Implementation Notes
 
-- 2026-09-28: Verified local Today selection, incomplete planned workload, and all three sorts. Overdue due dates are visibly labeled inline, rather than a separate section. Estimates are manual in Milestone 1. Timers, predictions, completed-workload totals, and persisted manual ordering remain pending.
+- 2026-09-28: Verified local Today selection, incomplete planned workload, and all three sorts. Overdue due dates are visibly labeled inline, rather than a separate section. Estimates are manual in Milestone 1. At this dated M1 checkpoint timers/predictions were pending; M3/M4/M4.5 implemented them. Completed-workload totals and persisted manual ordering remain pending.
 
 ---
 
@@ -1096,8 +1130,8 @@ Prioritize business-critical logic.
 
 Required tests:
 
-- [ ] Duration estimator.
-- [ ] Time-session aggregation.
+- [x] Duration estimator.
+- [x] Time-session aggregation.
 - [x] Daily workload calculation.
 - [ ] Reading quota calculation.
 - [ ] Analytics date grouping.
@@ -1109,7 +1143,7 @@ Where practical, add integration tests for:
 
 - [ ] Authentication-protected routes.
 - [ ] Task creation.
-- [ ] Timer lifecycle.
+- [x] Timer lifecycle.
 - [ ] Reading-session creation.
 
 ### Acceptance Criteria
@@ -1119,6 +1153,8 @@ Where practical, add integration tests for:
 - Tests do not depend on random production data.
 
 ### Implementation Notes
+
+- 2026-10-03 M4.6 audit: estimator and aggregation are verified by retained M3/M4/M4.5 tests; timer lifecycle passes embedded PostgreSQL with all five migrations. These flags describe local automated coverage, not new hosted acceptance.
 
 - 2026-09-28: Six passing Node tests cover sorting, Today selection, workload, validation, local persistence, retained deletion, and storage failures. Browser/IAB covered creation/editing/completion/reopening/deletion, refresh persistence, scheduling, sorting, navigation, and mobile editing. Future timer, reading, analytics, and authentication tests remain pending.
 

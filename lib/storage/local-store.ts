@@ -43,7 +43,7 @@ function hasTaskMetadata(value: Record<string, unknown>): boolean {
 function isTask(value: unknown): value is Task {
   if (!value || typeof value !== "object") return false;
   const task = value as Record<string, unknown>;
-  if (!hasTaskMetadata(task) || (task.categoryId !== null && typeof task.categoryId !== "string") || task.courseId != null || task.taskTypeId != null)
+  if (!hasTaskMetadata(task) || (task.categoryId !== null && typeof task.categoryId !== "string") || task.courseId != null || task.taskTypeId != null || (task.topicIds !== undefined && (!Array.isArray(task.topicIds) || task.topicIds.length > 0)))
     return false;
   try {
     validateTask(value as Task);

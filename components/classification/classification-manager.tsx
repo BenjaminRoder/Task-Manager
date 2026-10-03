@@ -5,6 +5,8 @@ import type { Course, CourseInput } from "@/types/course";
 import type { TaskType, TaskTypeInput } from "@/types/task-type";
 import { validateCourse, validateTaskType } from "@/lib/classification/classification-rules";
 
+import { validateTopic } from "@/lib/classification/topic-rules";
+
 interface ClassificationManagerProps {
   courses: Course[];
   taskTypes: TaskType[];
@@ -34,8 +36,9 @@ export function ClassificationManager(props: ClassificationManagerProps) {
   );
 }
 
-function NamedClassificationManager({ course, records, disabled, onCreate, onUpdate, onArchive }: {
+export function NamedClassificationManager({ course, label, records, disabled, onCreate, onUpdate, onArchive }: {
   course: boolean;
+  label?: string;
   records: readonly (Course | TaskType)[];
   disabled: boolean;
   onCreate(input: CourseInput): Promise<boolean>;
@@ -43,7 +46,7 @@ function NamedClassificationManager({ course, records, disabled, onCreate, onUpd
   onArchive(id: string, archived: boolean): Promise<boolean>;
 }) {
   const id = useId();
-  const noun = course ? "course" : "task type";
+  const noun = label ?? (course ? "course" : "task type");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -61,7 +64,7 @@ function NamedClassificationManager({ course, records, disabled, onCreate, onUpd
     event.preventDefault();
     if (disabled) return;
     try {
-      const fields = course ? validateCourse({ name, code }) : validateTaskType({ name });
+      const fields = course ? validateCourse({ name, code }) : label ? validateTopic({ name }) : validateTaskType({ name });
       setError("");
       if (await (editingId ? onUpdate(editingId, fields) : onCreate(fields))) {
         setNotice(editingId ? "Classification updated everywhere it is used." : "Created. You can now assign it to a task.");
@@ -74,12 +77,12 @@ function NamedClassificationManager({ course, records, disabled, onCreate, onUpd
   }
   return (
     <section aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>{course ? "Courses" : "Task types"}</h2>
+      <h2 id={`${id}-heading`}>{course ? "Courses" : label ? "Topics" : "Task types"}</h2>
       <form aria-label={`${editingId ? "Edit" : "Create"} ${noun}`} onSubmit={save}>
         <fieldset disabled={disabled} className="classification-fields">
-          <label htmlFor={`${id}-name`}>{course ? "Course name" : "Task type name"}
+          <label htmlFor={`${id}-name`}>{course ? "Course name" : label ? "Topic name" : "Task type name"}
             <input id={`${id}-name`} ref={input} value={name} onChange={(event) => setName(event.target.value)}
-              maxLength={60} required placeholder={course ? "e.g. Accounting" : "e.g. Homework"} />
+              maxLength={60} required placeholder={course ? "e.g. Accounting" : label ? "e.g. Chapter 8" : "e.g. Homework"} />
           </label>
           {course ? <label htmlFor={`${id}-code`}>Course code (optional)
             <input id={`${id}-code`} value={code} onChange={(event) => setCode(event.target.value)} maxLength={20} placeholder="e.g. ACCT 151" />
@@ -108,7 +111,7 @@ function NamedClassificationManager({ course, records, disabled, onCreate, onUpd
           </li>
         ))}
       </ul>
-      {!records.length ? <p className="category-help">No {course ? "courses" : "task types"} yet. Tasks can be created without them.</p> : null}
+      {!records.length ? <p className="category-help">No {course ? "courses" : label ? "topics" : "task types"} yet. Tasks can be created without them.</p> : null}
     </section>
   );
 }

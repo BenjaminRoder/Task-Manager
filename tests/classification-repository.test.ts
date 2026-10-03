@@ -81,3 +81,48 @@ test("task writes persist independent nullable classification references and pre
   assert.equal(f.requests[1].body?.task_type_id, null);
   assert.equal(f.requests[1].body?.estimated_minutes, 45);
 });
+
+
+test("topic adapter scopes lifecycle and rejects changed accounts or persistence failures", async () => {
+  const f = fixture(); const r = f.repositories.topics;
+  await r.create({ name: " Chapter 8 " });
+  const [topic] = await r.list();
+  assert.ok(topic.archivedAt); assert.ok(topic.createdAt); assert.ok(topic.updatedAt);
+  await r.update("record", { name: "Chapter Eight" });
+  await r.setArchived("record", true); await r.setArchived("record", false);
+  assert.equal(f.requests[0].body?.name, "Chapter 8");
+  for (const request of f.requests) {
+    assert.ok(request.url.pathname.endsWith("/topics"));
+    if (request.method === "POST") assert.equal(request.body?.user_id, owner);
+    else assert.equal(request.url.searchParams.get("user_id"), "eq." + owner);
+  }
+  f.changeAccount();
+  for (const operation of [() => r.list(), () => r.create({name:"New"}), () => r.update("record",{name:"New"}), () => r.setArchived("record",true)]) {
+    await assert.rejects(operation(), /session changed/);
+  }
+  const failed = fixture(); failed.fail();
+  await assert.rejects(failed.repositories.topics.list(), /Classification unavailable/);
+  await assert.rejects(failed.repositories.topics.create({ name: "New" }), /Classification unavailable/);
+});
+
+test("task adapter uses one atomic RPC for topic selections, including clearing all and preserving omitted legacy fields", async () => {
+  const f = fixture(); const r = f.repositories.tasks;
+  const input = { title:"Study", categoryId:null, priority:"medium" as const, scheduledDate:"2026-10-03", dueDate:null, estimatedMinutes:null, topicIds:["one","two","one"] };
+  await r.create(input);
+  await r.update("record", { ...input, topicIds: [] });
+  assert.equal(f.requests.length, 2);
+  assert.ok(f.requests.every((request) => request.url.pathname.endsWith("/rpc/save_task_with_topics")));
+  assert.deepEqual(f.requests[0].body?.p_topic_ids, ["one", "two"]);
+  assert.equal(f.requests[0].body?.p_task_id, null);
+  assert.equal(f.requests[0].body?.expected_user_id, owner);
+  assert.deepEqual(f.requests[1].body?.p_topic_ids, []);
+  assert.equal(f.requests[1].body?.p_task_id, "record");
+  const { topicIds, ...legacy } = input; void topicIds;
+  await r.update("record", legacy);
+  assert.equal(f.requests[2].method, "PATCH");
+  assert.ok(!Object.hasOwn(f.requests[2].body!, "topic_ids"));
+  f.fail(); await assert.rejects(r.update("record", input), /Classification unavailable/);
+  const pinned=fixture(); pinned.changeAccount();
+  await assert.rejects(pinned.repositories.tasks.create(input), /session changed/);
+  assert.equal(pinned.requests.length, 0);
+});

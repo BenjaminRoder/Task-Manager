@@ -6,6 +6,8 @@ import {
 } from "../../types/task.ts";
 import { effectiveEstimate, type Predictions } from "../estimation/duration-estimation.ts";
 
+import { validateTopicIds } from "../classification/topic-rules.ts";
+
 export function localDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -44,7 +46,7 @@ export function validateTask(input: TaskInput): TaskInput {
   ) {
     throw new Error("Choose a valid planned date and optional due date.");
   }
-  return { ...input, title, categoryId, courseId, taskTypeId };
+  return { ...input, title, categoryId, courseId, taskTypeId, ...(input.topicIds === undefined ? {} : { topicIds: validateTopicIds(input.topicIds) }) };
 }
 
 function validateClassificationId(value: string | null, label: string): string | null {
