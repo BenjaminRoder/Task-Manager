@@ -1,4 +1,5 @@
 import type { Task } from "../../types/task.ts";
+import type { Predictions } from "../estimation/duration-estimation.ts";
 import { isDate, remainingMinutes, sortTasks } from "./task-rules.ts";
 
 // Arithmetic on calendar dates, not elapsed milliseconds, avoids DST shifts.
@@ -22,19 +23,20 @@ export interface WeekDay {
   estimatedMinutes: number;
 }
 
-export function buildWeek(tasks: Task[], weekStart: string): WeekDay[] {
+export function buildWeek(tasks: Task[], weekStart: string, predictions?: Predictions): WeekDay[] {
   return Array.from({ length: 7 }, (_, index) => {
     const date = addCalendarDays(weekStart, index);
     const dueTasks = sortTasks(
       tasks.filter((task) => !task.deletedAt && task.dueDate === date),
       "momentum",
+      predictions,
     );
     return {
       date,
       tasks: dueTasks,
       incompleteCount: dueTasks.filter((task) => task.status === "incomplete")
         .length,
-      estimatedMinutes: remainingMinutes(dueTasks),
+      estimatedMinutes: remainingMinutes(dueTasks, predictions),
     };
   });
 }

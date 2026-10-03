@@ -4,6 +4,7 @@ import {
   type TaskInput,
   type SortMode,
 } from "../../types/task.ts";
+import { effectiveEstimate, type Predictions } from "../estimation/duration-estimation.ts";
 
 export function localDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -28,9 +29,9 @@ export function validateTask(input: TaskInput): TaskInput {
   if (!priorities.includes(input.priority))
     throw new Error("Choose a valid priority.");
   if (
-    !Number.isInteger(input.estimatedMinutes) ||
+    input.estimatedMinutes !== null && (!Number.isInteger(input.estimatedMinutes) ||
     input.estimatedMinutes < 1 ||
-    input.estimatedMinutes > 1440
+    input.estimatedMinutes > 1440)
   ) {
     throw new Error(
       "Estimate must be a whole number between 1 and 1,440 minutes.",
@@ -59,13 +60,13 @@ export function tasksForToday(tasks: Task[], today = localDate()): Task[] {
 
 const priorityRank = { critical: 0, high: 1, medium: 2, low: 3 };
 
-export function sortTasks(tasks: Task[], mode: SortMode): Task[] {
+export function sortTasks(tasks: Task[], mode: SortMode, predictions?: Predictions): Task[] {
   return [...tasks].sort((a, b) => {
     const statusOrder =
       Number(a.status === "completed") - Number(b.status === "completed");
     if (statusOrder) return statusOrder;
     let order = 0;
-    if (mode === "momentum") order = a.estimatedMinutes - b.estimatedMinutes;
+    if (mode === "momentum") order = effectiveEstimate(a, predictions?.get(a.id)) - effectiveEstimate(b, predictions?.get(b.id));
     if (mode === "priority")
       order = priorityRank[a.priority] - priorityRank[b.priority];
     if (mode === "deadline")
@@ -80,12 +81,12 @@ export function sortTasks(tasks: Task[], mode: SortMode): Task[] {
   });
 }
 
-export function remainingMinutes(tasks: Task[]): number {
+export function remainingMinutes(tasks: Task[], predictions?: Predictions): number {
   return tasks.reduce(
     (total, task) =>
       total +
       (task.status === "incomplete" && !task.deletedAt
-        ? task.estimatedMinutes
+        ? effectiveEstimate(task, predictions?.get(task.id))
         : 0),
     0,
   );

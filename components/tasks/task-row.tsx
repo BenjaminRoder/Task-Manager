@@ -5,10 +5,13 @@ import { useState } from "react";
 import type { Task } from "@/types/task";
 import type { Category } from "@/types/category";
 import { CategoryBadge } from "@/components/categories/category-badge";
-import { formatDate, formatDuration } from "@/lib/tasks/task-rules";
+import { formatDate } from "@/lib/tasks/task-rules";
+import { EstimateDetails } from "./estimate-details";
+import type { DurationPrediction } from "@/lib/estimation/duration-estimation";
 
 interface TaskRowProps {
   task: Task;
+  prediction?: DurationPrediction;
   category: Category;
   today: string;
   busy: boolean;
@@ -19,6 +22,7 @@ interface TaskRowProps {
 
 export function TaskRow({
   task,
+  prediction,
   category,
   today,
   busy,
@@ -63,9 +67,7 @@ export function TaskRow({
             {complete ? <span>Completed</span> : null}
           </div>
         </div>
-        <span className="task-duration">
-          Estimated: {formatDuration(task.estimatedMinutes)}
-        </span>
+        <EstimateDetails task={task} prediction={prediction} />
         <div className="row-actions">
           <button
             type="button"

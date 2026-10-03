@@ -7,7 +7,7 @@ import {
 import { validateTask } from "./task-rules.ts";
 
 export interface TaskRepository {
-  list(): Promise<Task[]>;
+  list(includeDeleted?: boolean): Promise<Task[]>;
   create(input: TaskInput): Promise<void>;
   update(id: string, input: TaskInput): Promise<void>;
   setStatus(id: string, status: TaskStatus): Promise<void>;
@@ -48,8 +48,8 @@ export function createLocalTaskRepository(store: LocalStore): TaskRepository {
   }
 
   return {
-    async list() {
-      return store.read().tasks.filter((task) => !task.deletedAt);
+    async list(includeDeleted = false) {
+      return store.read().tasks.filter((task) => includeDeleted || !task.deletedAt);
     },
     async create(input) {
       const fields = validateTask(input);

@@ -20,7 +20,7 @@ const sortDescriptions: Record<SortMode, string> = {
 };
 
 export function TaskBoard({ view }: { view: "today" | "all" }) {
-  const { tasks, categories, ready, busy, error, today, refresh, mutate } =
+  const { tasks, predictions, estimationReady, categories, ready, busy, error, today, refresh, mutate } =
     useTasks();
   const [sort, setSort] = useState<SortMode>("momentum");
   const [editing, setEditing] = useState<Task | null>(null);
@@ -31,6 +31,7 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
   const incomplete = sortTasks(
     visible.filter((task) => task.status === "incomplete"),
     sort,
+    predictions,
   );
   const completed = visible.filter((task) => task.status === "completed");
   const categoryById = new Map(
@@ -50,6 +51,7 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
       <TaskRow
         key={task.id}
         task={task}
+        prediction={predictions?.get(task.id)}
         category={categoryById.get(task.categoryId)!}
         today={today!}
         busy={busy || !ready}
@@ -131,7 +133,7 @@ export function TaskBoard({ view }: { view: "today" | "all" }) {
               remaining
             </span>
             <strong>
-              {formatDuration(remainingMinutes(incomplete))} planned
+              {estimationReady ? `${formatDuration(remainingMinutes(incomplete, predictions))} planned` : "Workload history loading or unavailable"}
             </strong>
           </div>
           <div ref={formContainer}>

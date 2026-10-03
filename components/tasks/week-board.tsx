@@ -15,14 +15,14 @@ import { TaskRow } from "./task-row";
 import { WeekCalendar } from "./week-calendar";
 
 export function WeekBoard() {
-  const { tasks, categories, ready, busy, error, today, refresh, mutate } =
+  const { tasks, predictions, estimationReady, categories, ready, busy, error, today, refresh, mutate } =
     useTasks();
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const editor = useRef<HTMLDivElement>(null);
   const weekStart = selectedWeek ?? (today ? startOfWeek(today) : null);
-  const days = weekStart ? buildWeek(tasks, weekStart) : [];
+  const days = weekStart ? buildWeek(tasks, weekStart, predictions) : [];
   const editing = tasks.find((task) => task.id === editingId);
   const totalCount = days.reduce((sum, day) => sum + day.incompleteCount, 0);
   const totalMinutes = days.reduce((sum, day) => sum + day.estimatedMinutes, 0);
@@ -92,7 +92,7 @@ export function WeekBoard() {
               {totalCount} {totalCount === 1 ? "task" : "tasks"} remaining this
               week
             </span>
-            <strong>{formatDuration(totalMinutes)} due</strong>
+            <strong>{estimationReady ? `${formatDuration(totalMinutes)} due` : "Workload history loading or unavailable"}</strong>
           </div>
           <CategoryManager
             categories={categories}
@@ -132,6 +132,7 @@ export function WeekBoard() {
                 />
                 <TaskRow
                   task={editing}
+                  prediction={predictions?.get(editing.id)}
                   category={categories.find(
                     (category) => category.id === editing.categoryId,
                   )!}
@@ -174,6 +175,8 @@ export function WeekBoard() {
           </div>
           <WeekCalendar
             days={days}
+            predictions={predictions}
+            estimationReady={estimationReady}
             today={today}
             categories={categories}
             disabled={busy}

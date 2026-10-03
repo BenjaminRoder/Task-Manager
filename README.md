@@ -1,13 +1,14 @@
 # Personal Task Manager
 
-Private task management with Today, Tasks, Week, custom color categories, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers and correctable session history are available. Prediction, analytics, reading, and calendar integration remain deferred.
+Private task management with Today, Tasks, Week, custom color categories, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers, correctable session history, and deterministic duration estimation are implemented. M4 hosted acceptance is pending. Analytics, reading, and calendar integration remain deferred.
 
 See [BUILD_PLAN.md](BUILD_PLAN.md), [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), and [AGENTS.md](AGENTS.md).
 
 ## Set up Supabase (one time)
 
 1. Create a project at https://supabase.com/dashboard. Keep its database password private.
-2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. Then run `supabase/migrations/202609300001_time_sessions.sql` once. Together these create the task/category/import and timer tables, constraints, indexes, triggers, RLS policies, and RPCs. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
+2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. Then run `supabase/migrations/202609300001_time_sessions.sql` once, followed by `supabase/migrations/202610030001_optional_manual_estimate.sql` once. These create the task/category/import and timer tables, constraints, indexes, triggers, RLS policies, and RPCs, and allow blank manual estimates. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
+
 3. In **Authentication → Sign In / Providers**, enable Email/password. Disable public signups for this private application. Under **Authentication → Users → Add user → Create new user**, create your email/password account and mark the email confirmed. There is intentionally no public registration or password-reset UI; manage the private account in the dashboard.
 4. Copy the project URL and **publishable** API key from the project's Connect/API settings. Never use a secret or service-role key. Create `.env.local` in the inner repository (next to `package.json`):
 
@@ -123,3 +124,13 @@ All 24 tests, lint, type checking, and the production build pass. Timer tests ex
 Live hosted SQL acceptance passed using `supabase/tests/timer_acceptance.sql` (a rollback-only test under the authenticated role). Cross-owner checks used a simulated second JWT subject, not a second real browser login. Browser checks against Supabase covered start/stop/resume, canceled/confirmed switching, navigation/refresh, edits while timing, exact corrected totals, removal, completion/reopen, deletion, categories, sorting, and Week workload. Session history survived sign-out/sign-in. The user stopped/restarted the QA timer between visits; the restarted timer and earlier history were recovered, rather than claiming uninterrupted operation of the original session.
 
 Desktop (1440px) and narrow (320px) QA passed without horizontal overflow. Task fields now stack below 400px so native dates remain readable. QA tasks were soft-deleted, their category archived, and all six test sessions voided; historical rows remain recoverable but do not contribute to actual time. No real user records were removed. Multi-device load testing, two-real-account browser isolation, and real network-outage testing remain unperformed; local SQL/adapter failure tests and hosted simulated-owner checks are the available evidence. See BUILD_PLAN.md for the full validation record and deferred scope.
+
+### Milestone 4 upgrade and estimation
+
+For an existing M3 database, apply **only** `supabase/migrations/202610030001_optional_manual_estimate.sql` once through SQL Editor, or your linked/tracked CLI migration workflow. This upgrade has not yet been applied to the connected hosted project. Existing manual estimates are preserved; the column becomes nullable while its 1–1440 bound and existing RLS remain intact. Apply it before using blank estimates in the updated application.
+
+Leave Manual estimate blank for automatic estimation. A manual value always overrides the prediction for Momentum, Today, and Week. Expand Estimated on a task row to see manual/predicted values, source, observation count, and heuristic confidence. Three valid completed timed tasks are needed; same-category history is preferred, then global history, then a 25-minute effective default. The newest twenty comparable tasks use linear rank weights (newest N, oldest 1), rounded to nearest five minutes with a five-minute floor.
+
+Completed soft-deleted tasks remain training history. Reopened tasks are excluded until completed again. Ended, non-void, positive finite session durations train predictions; active tasks do not. Correction/removal updates derived predictions after session reload. Predictions are not saved snapshots and there is no actual-duration cache. Courses/task types and analytics snapshots remain deferred.
+
+M4 local validation: lint, typecheck, 39 tests (including actual three-migration PostgreSQL estimation/timer tests), and optimized build pass. Production Playwright checks verified only protected sign-in routes at 1440px/320px. Hosted migration and signed-in task/prediction/timer/mobile acceptance remain pending; see BUILD_PLAN.md for the exact unchecked flows.

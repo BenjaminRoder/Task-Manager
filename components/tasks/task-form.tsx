@@ -9,6 +9,7 @@ import {
 } from "@/types/task";
 import { validateTask } from "@/lib/tasks/task-rules";
 import type { Category } from "@/types/category";
+import { estimationRules } from "@/lib/estimation/duration-estimation";
 
 interface TaskFormProps {
   task?: Task;
@@ -44,7 +45,7 @@ export function TaskForm({
         title: String(data.get("title") ?? ""),
         categoryId: String(data.get("categoryId") ?? ""),
         priority: String(data.get("priority")) as Priority,
-        estimatedMinutes: Number(data.get("estimatedMinutes")),
+        estimatedMinutes: String(data.get("estimatedMinutes") ?? "").trim() === "" ? null : Number(data.get("estimatedMinutes")),
         dueDate: String(data.get("dueDate") ?? "") || null,
         scheduledDate: String(data.get("scheduledDate") ?? ""),
       });
@@ -132,7 +133,7 @@ export function TaskForm({
             </select>
           </label>
           <label htmlFor={`${id}-estimate`}>
-            Estimate (min)
+            Manual estimate (min, optional)
             <input
               id={`${id}-estimate`}
               name="estimatedMinutes"
@@ -140,8 +141,8 @@ export function TaskForm({
               min="1"
               max="1440"
               step="1"
-              defaultValue={task?.estimatedMinutes ?? 25}
-              required
+              defaultValue={task?.estimatedMinutes ?? ""}
+              placeholder="Automatic"
             />
           </label>
           <label htmlFor={`${id}-due`}>
@@ -165,6 +166,7 @@ export function TaskForm({
           </label>
         </div>
       </fieldset>
+      <p className="category-help">Leave the manual estimate blank to use history, or {estimationRules.defaultMinutes} min until enough history exists. A manual estimate overrides the prediction.</p>
       {!availableCategories.length ? (
         <p className="category-help">
           Create or restore a category using Manage categories above.

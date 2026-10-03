@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTimer } from "../timers/timer-provider";
+import { predictTasks } from "../estimation/duration-estimation";
 import type { Task } from "@/types/task";
 import type { Category } from "@/types/category";
 import type { TaskRepository } from "./task-repository";
@@ -10,6 +12,7 @@ import { localDate } from "./task-rules";
 import { useRepositories } from "../supabase/repository-context";
 
 export function useTasks() {
+  const timer = useTimer();
   const { tasks: repository, categories: categorySource } = useRepositories();
   const [data, setData] = useState<{ tasks: Task[]; categories: Category[] }>({
     tasks: [],
@@ -24,7 +27,7 @@ export function useTasks() {
 
   const load = useCallback(async () => {
     const [tasks, categories] = await Promise.all([
-      repository.list(),
+      repository.list(true),
       categorySource.list(),
     ]);
     return { tasks, categories };
@@ -127,5 +130,8 @@ export function useTasks() {
     }
   }
 
-  return { ...data, ready, busy, error, today, refresh, mutate };
+  const predictions = useMemo(() => timer.ready ? predictTasks(data.tasks, timer.sessions) : undefined,
+    [data.tasks, timer.sessions, timer.ready]);
+  return { ...data, tasks: data.tasks.filter((task) => !task.deletedAt), predictions,
+    estimationReady: timer.ready, ready, busy, error, today, refresh, mutate };
 }

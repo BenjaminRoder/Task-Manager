@@ -344,6 +344,18 @@ h2 {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+details.task-duration {
+  white-space: normal;
+  max-width: 260px;
+}
+details.task-duration summary {
+  cursor: pointer;
+}
+details.task-duration p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
 .row-actions {
   display: flex;
   gap: 2px;

@@ -12,6 +12,42 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 4 — Deterministic duration estimation — implemented, hosted acceptance pending 2026-10-03
+
+The authorized scope is persisted task/session history → deterministic prediction → effective estimate → Momentum/Today/Week. Task 10 below describes the implemented hierarchy; the older course/task-type hierarchy is explicitly deferred.
+
+### Verified implementation
+
+- [x] Pure estimation module with prediction minutes, source, sample size, and heuristic confidence.
+- [x] Owner-scoped, paginated task history includes soft-deleted completed tasks; visible lists still exclude deleted tasks.
+- [x] Derive observations from the existing stopped, non-void session ledger; no actual-duration cache.
+- [x] Same-category → global history → fallback hierarchy with finite, weighted recent history.
+- [x] Preserve manual estimates separately and share one effective-estimate function across Momentum, Today, Week, and planned-duration displays.
+- [x] Nullable manual estimate migration preserves existing numbers and existing validation/RLS/timer constraints.
+- [x] Automated tests cover eligibility, weights, bounds, rounding, confidence, precedence, determinism, ordering/workload, repository requests, and real PostgreSQL corrections/lifecycle.
+- [x] Lint, typecheck, 39 tests, and production build pass.
+- [x] Production Playwright sign-in smoke checks on Today/Tasks/Week at 1440px and 320px; no overflow or page errors.
+- [ ] Apply `202610030001_optional_manual_estimate.sql` to the connected hosted database.
+- [ ] Signed-in browser acceptance with real Supabase: create/time/complete three category tasks, inspect prediction and recency, preserve/clear manual override, check Momentum/Today/Week, refresh, correct/void history, and verify active timer recovery.
+- [ ] Signed-in mobile review of expandable prediction details and automatic-estimate form.
+
+### Durable design decisions
+
+- Classification: category ID is the most specific implemented field. Require three usable same-category observations; otherwise require three globally. Courses/task types do not exist. Preserve course+type, course, category+type, and type matching as a later classification prerequisite before course/type analytics in Milestone 6; do not add those systems in M4.
+- Parameters live in `lib/estimation/duration-estimation.ts`: minimum 3, newest 20 matching tasks, newest weight N down to oldest weight 1, sum(minutes × weight)/sum(weights). Rank uses completedAt descending, then task ID to resolve ties, without the current clock. Round to nearest 5 minutes (half up), floor 5 minutes. Do not cap real multi-session task totals at the manual-entry limit.
+- Confidence is heuristic, never a probability: fallback/global low; category 3–7 medium; category 8–20 high. Count only usable observations, and never label broader global history high confidence.
+- Eligibility: current status completed, valid completedAt, positive finite summed duration from ended non-void sessions with valid increasing timestamps and positive finite generated durationSeconds. Exclude zero/invalid sessions, active sessions, and any task with a non-void active session. Include completed soft-deleted tasks and archived category relationships. Exclude reopened tasks until recompleted; recompletion uses the entire retained eligible ledger and latest completion timestamp. Exclude the target itself. Session corrections/voids affect the next derivation.
+- `Task.estimatedMinutes` / SQL `estimated_minutes` remains the manual value, now nullable. Existing values are preserved as overrides because earlier records cannot distinguish default entry from deliberate entry. New forms default blank; blank means automatic. Effective estimate is valid manual (integer 1–1440) → positive finite prediction → 25 minutes. Predictions never overwrite manual values. Compact expandable row details show both values, source/count/confidence, and precedence; Week uses the same effective minutes.
+- Predictions are derived from repository task history and the shared TimerProvider session records, memoized against data changes. No prediction snapshots or new actual-time field. Estimate-at-completion snapshots for future error analytics remain a Milestone 6 decision; current predictions are not historical snapshots. Session load failures show workload/history unavailable instead of presenting missing data as no history.
+
+### Verification and remaining acceptance
+
+2026-10-03: Added 13 estimator tests, one real PostgreSQL estimation integration test, one repository request/nullable-write test, and extended the existing timer migration test to execute all three migrations and validate nullable/manual bounds. All 24 previous tests are retained (39 total). Embedded PostgreSQL verifies generated session totals, corrections/voids, completed deletion/reopening/recompletion, nullable overrides, and unchanged timer/RLS invariants. Typecheck initially found corrupt ignored `.next/dev/types` artifacts; removed only those generated files and regenerated successfully.
+
+The native browser/Node tool cannot start because the Windows sandbox helper fails during setup. Elevated shell tools and bundled Playwright work. A fresh headless Chrome session verified production protected routes at desktop/mobile widths; it has no signed-in account, so no M4 authenticated browser flow is claimed. Hosted migration was not applied: there is no available authenticated dashboard/browser or database-management connection. README provides exact application instructions. M4 is **not fully accepted** until the unchecked hosted/browser items pass. No legitimate hosted task/session data was changed. Finish that acceptance before Milestone 5 Reading; Milestones 5–7 were not implemented.
+
+---
+
 ## Milestone 3 — Persistent task timers and session history — complete 2026-10-01
 
 The user authorized timing infrastructure only. This section supersedes older notes that defer timers; all prediction, analytics, reading, calendar integration, and scheduling work remains deferred.
@@ -703,8 +739,8 @@ Sorting modes:
 
 Order incomplete tasks by best available duration:
 
-1. predicted duration
-2. manual estimate
+1. valid manual estimate (deliberate override; see Milestone 4)
+2. valid derived predicted duration
 3. fallback estimate
 
 Shortest first.
@@ -783,23 +819,21 @@ lib/estimation/
 
 Matching hierarchy:
 
-1. same course + same task type
-2. same course
-3. same category + same task type
-4. same task type
-5. same category
-6. general completed-task history
-7. manual/default fallback
+1. same category (minimum three usable completed timed tasks)
+2. general completed-task history (minimum three)
+3. no prediction; effective estimate uses manual or 25-minute default
+
+Course+task-type, course, category+task-type, and task-type levels are deferred until those classification fields are implemented, before Milestone 6 course/type analytics. Manual override takes precedence over every prediction level.
 
 Required:
 
-- [ ] Query historical comparable tasks.
-- [ ] Derive actual duration from time sessions.
-- [ ] Implement weighted recent average.
-- [ ] Require a reasonable minimum history before displaying a strong prediction.
-- [ ] Return metadata describing prediction source.
-- [ ] Store or update predicted duration where appropriate.
-- [ ] Allow manual estimate to remain visible separately.
+- [x] Query historical comparable tasks.
+- [x] Derive actual duration from time sessions.
+- [x] Implement weighted recent average.
+- [x] Require a reasonable minimum history before displaying a strong prediction.
+- [x] Return metadata describing prediction source.
+- [x] Derive predicted duration when needed; snapshot persistence deferred to Milestone 6.
+- [x] Allow manual estimate to remain visible separately (signed-in browser acceptance pending).
 
 Possible return shape:
 
@@ -809,10 +843,6 @@ type DurationPrediction = {
   confidence: "low" | "medium" | "high"
   sampleSize: number
   source:
-    | "course_task_type"
-    | "course"
-    | "category_task_type"
-    | "task_type"
     | "category"
     | "global"
     | "fallback"
@@ -829,7 +859,7 @@ type DurationPrediction = {
 
 ### Implementation Notes
 
-_Add notes here when complete._
+2026-10-03: Pure estimator, nullable manual override, retained task history, shared Momentum/Today/Week calculations, and compact estimate details implemented. Algorithm, eligibility, parameters, tests, migration instructions, and pending hosted/browser acceptance are recorded in Milestone 4 above. Do not mark M4 fully accepted until those pending checks pass.
 
 ---
 

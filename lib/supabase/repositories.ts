@@ -13,7 +13,7 @@ export type TaskRow = {
   priority: Task["priority"];
   due_date: string | null;
   scheduled_date: string;
-  estimated_minutes: number;
+  estimated_minutes: number | null;
   status: Task["status"];
   created_at: string;
   completed_at: string | null;
@@ -107,7 +107,7 @@ export function createSupabaseRepositories(
         "This record is no longer available. Refresh and try again.",
       );
   }
-  async function list(table: "tasks" | "categories") {
+  async function list(table: "tasks" | "categories", includeDeleted = false) {
     await authorize();
     const rows: (TaskRow | CategoryRow)[] = [];
     // PostgREST defaults to a 1,000-row cap. Page explicitly to retain history.
@@ -118,7 +118,7 @@ export function createSupabaseRepositories(
         .eq("user_id", userId)
         .order("id")
         .range(start, start + 499);
-      if (table === "tasks") query = query.is("deleted_at", null);
+      if (table === "tasks" && !includeDeleted) query = query.is("deleted_at", null);
       const { data, error } = await query;
       databaseError(error);
       rows.push(...(data ?? []));
@@ -128,8 +128,8 @@ export function createSupabaseRepositories(
   }
   return {
     tasks: {
-      async list() {
-        return ((await list("tasks")) as TaskRow[]).map(taskFromRow);
+      async list(includeDeleted = false) {
+        return ((await list("tasks", includeDeleted)) as TaskRow[]).map(taskFromRow);
       },
       async create(input) {
         const fields = taskFields(input);

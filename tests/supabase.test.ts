@@ -176,6 +176,19 @@ test("expired/switched account rejects old repositories before issuing data requ
   assert.equal(f.requests.length, 0);
 });
 
+test("estimation reads retained history with owner scoping and writes nullable manual estimates separately", async () => {
+  const f = fixture();
+  const r = createSupabaseRepositories(f.client, owner);
+  await r.tasks.list(true);
+  assert.equal(f.requests[0].url.searchParams.get("deleted_at"), null);
+  assert.equal(f.requests[0].url.searchParams.get("user_id"), `eq.${owner}`);
+  await r.tasks.list();
+  assert.equal(f.requests[1].url.searchParams.get("deleted_at"), "is.null");
+  await r.tasks.create({ ...task, estimatedMinutes: null });
+  assert.equal(f.requests[2].body?.estimated_minutes, null);
+  assert.equal(Object.hasOwn(f.requests[2].body!, "predicted_minutes"), false);
+});
+
 test("local discovery is non-destructive, stable, preserves all history and handles empty/corrupt data", async () => {
   const s = storage();
   assert.equal(await detectLocalImport(s), null);

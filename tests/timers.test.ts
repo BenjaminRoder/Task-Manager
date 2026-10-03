@@ -93,6 +93,7 @@ test("PostgreSQL timers: lifecycle, retries, switch consent, corrections, comple
     for (const file of [
       "202609290001_milestone2.sql",
       "202609300001_time_sessions.sql",
+      "202610030001_optional_manual_estimate.sql",
     ])
       await db.exec(
         await readFile(
@@ -103,6 +104,11 @@ test("PostgreSQL timers: lifecycle, retries, switch consent, corrections, comple
     await db.exec(`set role authenticated; set request.jwt.claim.sub='${alice}';
       insert into categories(id,name,color) values('cat','Work','#123456');
       insert into tasks(id,title,category_id,priority,scheduled_date,estimated_minutes) values('a','Task A','cat','high','2026-09-30',30),('b','Task B','cat','low','2026-09-30',15);`);
+    await db.exec("update tasks set estimated_minutes = null where id = 'a'");
+    assert.equal((await db.query<{ estimated_minutes: number | null }>("select estimated_minutes from tasks where id = 'a'")).rows[0].estimated_minutes, null);
+    assert.equal((await db.query<{ estimated_minutes: number }>("select estimated_minutes from tasks where id = 'b'")).rows[0].estimated_minutes, 15);
+    await assert.rejects(db.exec("update tasks set estimated_minutes = 0 where id = 'a'"));
+    await assert.rejects(db.exec("update tasks set estimated_minutes = 1441 where id = 'a'"));
     const start = async (
       task: string,
       id = crypto.randomUUID(),

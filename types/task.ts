@@ -9,7 +9,8 @@ export interface TaskInput {
   priority: Priority;
   dueDate: string | null;
   scheduledDate: string;
-  estimatedMinutes: number;
+  // Persisted manual estimate. Null means the user chooses automatic estimation.
+  estimatedMinutes: number | null;
 }
 
 export interface Task extends TaskInput {

@@ -5,9 +5,12 @@ import type { Task } from "@/types/task";
 import type { WeekDay } from "@/lib/tasks/week-rules";
 import { formatDate, formatDuration } from "@/lib/tasks/task-rules";
 import { CategoryBadge } from "@/components/categories/category-badge";
+import { effectiveEstimate, type Predictions } from "@/lib/estimation/duration-estimation";
 
 interface WeekCalendarProps {
   days: WeekDay[];
+  predictions?: Predictions;
+  estimationReady: boolean;
   today: string;
   categories: Category[];
   disabled: boolean;
@@ -16,6 +19,8 @@ interface WeekCalendarProps {
 
 export function WeekCalendar({
   days,
+  predictions,
+  estimationReady,
   today,
   categories,
   disabled,
@@ -60,12 +65,12 @@ export function WeekCalendar({
                   {day.incompleteCount === 1 ? "task" : "tasks"} remaining
                 </p>
                 <p className="day-workload">
-                  {formatDuration(day.estimatedMinutes)}
+                  {estimationReady ? formatDuration(day.estimatedMinutes) : "History unavailable"}
                 </p>
                 <div className="workload-track" aria-hidden="true">
                   <span
                     style={{
-                      width: `${(day.estimatedMinutes / busiest) * 100}%`,
+                      width: estimationReady ? `${(day.estimatedMinutes / busiest) * 100}%` : "0%",
                     }}
                   />
                 </div>
@@ -90,7 +95,7 @@ export function WeekCalendar({
                         category={categoryById.get(task.categoryId)!}
                       />
                       <span className="week-task-details">
-                        <span>{formatDuration(task.estimatedMinutes)}</span>
+                        <span>{estimationReady || task.estimatedMinutes !== null ? formatDuration(effectiveEstimate(task, predictions?.get(task.id))) : "History unavailable"}</span>
                         <span className={`priority priority-${task.priority}`}>
                           {task.priority}
                         </span>
