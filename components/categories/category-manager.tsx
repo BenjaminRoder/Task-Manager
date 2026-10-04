@@ -173,7 +173,7 @@ export function CategoryManager({
             {notice}
           </p>
           <button type="button" className="secondary-button" aria-pressed={showArchived}
-            onClick={() => setShowArchived(!showArchived)}>Show archived</button>
+            onClick={() => setShowArchived(!showArchived)}>{showArchived ? "Hide archived" : "Show archived"}</button>
           <ul className="category-list">
             {[...categories]
               .filter((category) => showArchived || !category.archivedAt)

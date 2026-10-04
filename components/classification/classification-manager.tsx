@@ -95,7 +95,7 @@ export function NamedClassificationManager({ course, label, records, disabled, o
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <p className="notice" role="status">{notice}</p>
       <button type="button" className="secondary-button" aria-pressed={showArchived}
-        onClick={() => setShowArchived(!showArchived)}>Show archived</button>
+        onClick={() => setShowArchived(!showArchived)}>{showArchived ? "Hide archived" : "Show archived"}</button>
       <ul className="category-list">
         {records.filter((record) => showArchived || !record.archivedAt).sort((a, b) => Number(!!a.archivedAt) - Number(!!b.archivedAt) || a.name.localeCompare(b.name)).map((record) => (
           <li key={record.id} className={record.archivedAt ? "is-archived" : undefined}>

@@ -1086,7 +1086,12 @@ details.task-duration p {
   }
 }
 
-.auth-panel { max-width: 36rem; margin: 3rem auto; }
+.main-content:has(> .auth-panel) { display: flex; align-items: center; justify-content: center; padding-block: 30px; }
+.auth-panel { width: 100%; max-width: 36rem; margin: 0 auto; }
+@media (max-width: 760px) {
+  .app-shell:has(> .main-content > .auth-panel) { display: flex; flex-direction: column; }
+  .main-content:has(> .auth-panel) { flex: 1; }
+}
 .auth-panel h1 { font-size: 2rem; margin-bottom: 1rem; }
 .auth-panel p, .import-panel p { margin: 1rem 0; overflow-wrap: anywhere; }
 .auth-panel form { display: grid; gap: 1rem; margin: 1.5rem 0; }

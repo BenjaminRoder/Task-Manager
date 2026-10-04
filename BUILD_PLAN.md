@@ -12,6 +12,14 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## UI polish — completed and verified 2026-10-04
+
+- [x] Archive visibility buttons now read **Show archived** when OFF and **Hide archived** when ON, retaining `aria-pressed`. Categories and Reading use their existing controls; Courses/Task types/Topics inherit the label change from `NamedClassificationManager`. Filtering and archive/restore behavior are unchanged.
+- [x] Vertically center the sign-in panel using auth-only main-content flex layout, symmetric vertical padding, and the existing panel width limit. Mobile auth layout fills the space beneath navigation and remains scrollable on short screens. Form markup, inputs, and button styling are unchanged.
+- Validation: `npm run lint`, `npm run typecheck`, `npm test` (**98/98**), `npm run build`, `npm run test:classification-ui`, `npm run test:reading-ui`, and `git diff --check` PASS. Existing browser assertions verify both visible toggle labels, including Topics. A local signed-out production-browser check confirms viewport centering at 1440×1000 and no horizontal overflow at 320×900 or 320×480; no sign-in was submitted or hosted auth request allowed. No schema, migration, RLS, or unrelated behavior changes; no commit or push.
+
+---
+
 ## Management archive visibility — completed and verified 2026-10-04
 
 - [x] Add local **Show archived** controls, OFF by default, to Categories, Courses, Task types, Topics, and Reading books management lists.

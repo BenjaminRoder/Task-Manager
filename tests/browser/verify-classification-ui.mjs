@@ -44,7 +44,7 @@ try {
   await page.goto(url);
   // Exercise the actual management lists without touching hosted records.
   async function verifyArchivedVisibility(section, noun, name) {
-    const toggle = section.getByRole("button", { name: "Show archived", exact: true });
+    const toggle = section.getByRole("button", { name: /^(Show|Hide) archived$/ });
     const archive = section.getByRole("button", { name: `Archive ${noun} ${name}`, exact: true });
     const restore = section.getByRole("button", { name: `Restore ${noun} ${name}`, exact: true });
     assert.equal(await toggle.getAttribute("aria-pressed"), "false");
@@ -52,10 +52,12 @@ try {
     await restore.waitFor({ state: "detached" });
     await archive.waitFor({ state: "detached" });
     await toggle.click();
+    assert.equal(await toggle.innerText(), "Hide archived");
     await restore.waitFor();
     await restore.click();
     await archive.waitFor();
     await toggle.click();
+    assert.equal(await toggle.innerText(), "Show archived");
     await archive.waitFor(); // Restored records remain visible with the filter off.
     await toggle.click();
     await archive.click();

@@ -54,7 +54,7 @@ export function ReadingBoard(){
       </details>
       <p className="notice" role="status">{busy?"Saving…":notice}</p>
       <p className="category-help">Pace uses up to 28 recent calendar days, including days without reading. Projections are estimates, not deadlines.</p>
-      <button type="button" className="secondary-button" aria-pressed={showArchived} onClick={()=>setShowArchived(!showArchived)}>Show archived</button>
+      <button type="button" className="secondary-button" aria-pressed={showArchived} onClick={()=>setShowArchived(!showArchived)}>{showArchived ? "Hide archived" : "Show archived"}</button>
       {(["reading","want_to_read","paused","completed","archived"] as const).map(group=>{const rows=books.filter(book=>group==="archived"?showArchived&&!!book.archivedAt:!book.archivedAt&&book.status===group);
         return rows.length?<section key={group} className="reading-section"><h2>{group==="archived"?"Archived books":statusLabels[group]}</h2>{rows.map(card)}</section>:null;})}
       {!books.length?<div className="empty-state"><h2>Your next chapter starts here.</h2><p>Add a book, set a weekly goal, and log pages as you read.</p></div>:null}
