@@ -1,6 +1,6 @@
 # Personal Task Manager
 
-Private task management with Today, Tasks, Week, custom color categories, optional courses and task types, customizable topics, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers, correctable session history, and deterministic duration estimation are implemented. Reading books, progress, correctable sessions and weekly goals are implemented. M4/M4.5/M4.6/M5 hosted acceptance is pending. Analytics and calendar integration remain deferred.
+Private task management with Today, Tasks, Week, custom color categories, optional courses and task types, customizable topics, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers, correctable session history, and deterministic duration estimation are implemented. Reading books, progress, correctable sessions and weekly goals are implemented. M4/M4.5/M4.6/M5 are implemented, migrated to hosted Supabase, and hosted-accepted 2026-10-04 (see BUILD_PLAN.md). The app is deployed to Netlify. Analytics and calendar integration remain deferred.
 
 See [BUILD_PLAN.md](BUILD_PLAN.md), [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), and [AGENTS.md](AGENTS.md).
 
@@ -94,7 +94,7 @@ Verified locally: dependency installation (zero audit vulnerabilities), lint, Ty
 
 `tests/database.test.ts` runs the **actual migration SQL** on embedded PostgreSQL (PGlite), with test-only Auth roles and `auth.uid()` fixture. It checks two-user isolation, anonymous denial, ownership spoofing, lifecycle/constraints, archived assignments, historical import, duplicate retries, conflict rollback, and failed-import atomicity. This is actual local SQL execution, not a hosted Supabase test. Browser smoke checks cover the missing-configuration screen on direct Today and Week routes, with no browser warning/error logs.
 
-**Requires live Supabase verification:** apply the migration on a hosted project; sign in/out and refresh; verify session expiry and cross-tab account changes; exercise task/category CRUD across Today/Tasks/Week; import a recovery copy and retry; test offline/save failures; use two real accounts to verify direct REST requests cannot read/write each other's data. No hosted connection was tested because credentials were unavailable. Complete those checks before treating Milestone 2 as operationally accepted.
+**Live Supabase verification (updated 2026-10-04):** the M2 migration is applied to the hosted project; sign-in/out and refresh, and task/category CRUD across Today/Tasks/Week, were verified through the real app. Remaining: session-expiry and cross-tab account-change behavior, import recovery retry, offline/save-failure handling, and two-real-account REST isolation checks.
 
 ESLint remains pinned to 9.39.5 for compatibility with the current Next.js React plugin. The Milestone 2 verification record above is historical. See the Milestone 3 section below for the timer implementation and migration.
 
@@ -145,7 +145,7 @@ Task capture now works with a title alone: dates/priority retain defaults, categ
 
 Local verification: **57 passing automated tests**, lint/typecheck/production build, actual four-migration PostgreSQL ownership/archive/reclassification/timer regressions, and an isolated real-component browser fixture. The fixture verifies all hierarchy levels, capture/editing, management/archives, manual override, shared Momentum/Today/Week estimates, refresh, timer UI, and 320px layouts using synthetic local data. It is not hosted Supabase acceptance.
 
-Run the browser fixture with `npm run test:classification-ui`. It requires installed Chrome and Playwright; the bundled Codex runtime is used by default, or set `PLAYWRIGHT_MODULE` to an installed Playwright module path. The runner creates a temporary Next app and removes it afterward; no fixture route or seeded data ships with production. Hosted migration application, authenticated persistence/timer flows, and hosted ownership acceptance remain unchecked in BUILD_PLAN.md. Finish those, then proceed to Milestone 5 Reading Tracker and Milestone 6 Analytics.
+Run the browser fixture with `npm run test:classification-ui`. It requires installed Chrome and Playwright; the bundled Codex runtime is used by default, or set `PLAYWRIGHT_MODULE` to an installed Playwright module path. The runner creates a temporary Next app and removes it afterward; no fixture route or seeded data ships with production. Hosted migration application and authenticated persistence/timer/reading flows were verified 2026-10-04 (see BUILD_PLAN.md); hosted mobile and cross-account checks remain open.
 
 
 ## M4.6 Topics/Tags

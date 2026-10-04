@@ -100,7 +100,7 @@ Evidence remains outside the repository in the same visualization directory abov
 
 ---
 
-## Milestone 5 — Reading Tracker — implemented; hosted acceptance pending 2026-10-03
+## Milestone 5 — Reading Tracker — implemented and hosted-accepted 2026-10-04
 
 ### Implemented and locally verified
 
@@ -114,7 +114,8 @@ Evidence remains outside the repository in the same visualization directory abov
 - [x] Lint, typecheck and production build pass; all six migrations execute under embedded PostgreSQL and Reading ownership checks pass.
 - [x] Isolated desktop/320px browser fixture: add/start/log, quota/current-page updates, refresh, session correction, overlap marker, manual progress/history preservation, completion, archive/restore, removed history and actual-form pace/projection. Existing task/classification/topic/estimation/timer browser fixture also passes.
 - [x] Apply M5 migration to hosted Supabase after M4/M4.5/M4.6 migrations — completed and verified 2026-10-04 in the hosted checkpoint above.
-- [ ] Authenticated hosted desktop/mobile acceptance, including sign-out/sign-in, real persistence/RLS, corrections and task/reading time-source behavior.
+- [x] Authenticated hosted desktop acceptance, including sign-out/sign-in, real persistence/RLS, corrections and task/reading time-source behavior — passed 2026-10-04 (see hosted checkpoint above).
+- [ ] Authenticated hosted mobile acceptance (narrow-viewport flows against the hosted project).
 
 ### Book and session semantics
 
@@ -140,11 +141,11 @@ Local PostgreSQL tests verify lifecycle, page/status constraints, generated page
 
 Only public Supabase configuration is available; no authenticated management connection was found. Nothing was applied or verified on the hosted project during M5. Pending order: `202610030001_optional_manual_estimate.sql` → `202610030002_task_classification.sql` → `202610030003_task_topics.sql` → `202610030004_reading.sql`. Do not rerun M2/M3 migrations. All hosted M4/M4.5/M4.6/M5 acceptance remains a release gate and does not block M6 development.
 
-Task 11 and its reading tests below are reconciled to locally/browser-verified work. M6 Analytics, unified History, final hardening/security/deployment and outstanding V1 task requirements remain unchecked. No external book API, ISBN/Goodreads, notes/highlights, recommendations, social features, calendars, notifications or Analytics UI was added. Ready for **M6 Analytics development** using existing task/timer/classification/topic/prediction/reading data, with hosted release acceptance still pending.
+Task 11 and its reading tests below are reconciled to locally/browser-verified work. M6 Analytics, unified History, final hardening/security and outstanding V1 task requirements remain unchecked. The app is deployed to Netlify (2026-10-04). No external book API, ISBN/Goodreads, notes/highlights, recommendations, social features, calendars, notifications or Analytics UI was added. Ready for **M6 Analytics development** using existing task/timer/classification/topic/prediction/reading data.
 
 ---
 
-## Milestone 4.6 — Topics/Tags — implemented; hosted acceptance pending 2026-10-03
+## Milestone 4.6 — Topics/Tags — implemented and hosted-accepted 2026-10-04
 
 ### Implemented and locally verified
 
@@ -178,7 +179,7 @@ The codebase is ready to begin **M5 Reading Tracker** development after this loc
 
 ---
 
-## Milestone 4.5 — Task classification and full estimation hierarchy — implemented, hosted acceptance pending 2026-10-03
+## Milestone 4.5 — Task classification and full estimation hierarchy — implemented and hosted-accepted 2026-10-04
 
 ### Verified implementation and local acceptance
 
@@ -192,8 +193,8 @@ The codebase is ready to begin **M5 Reading Tracker** development after this loc
 - [x] Historical reclassification changes future derived predictions; M4 session eligibility, soft-delete, reopening, correction/void behavior retained.
 - [x] All original 39 tests retained; 18 added classification/hierarchy/adapter/PostgreSQL tests (57 total) pass, alongside lint, typecheck, and optimized build.
 - [x] Isolated browser UI fixture verifies actual components with synthetic history: title-only/category-only/course-only/type-only capture/editing, all six hierarchy levels and insufficient-history fallback, named explanations, manual override, Momentum, Today/Week, rename/archive/restore, retained archived assignments, refresh, timer start/stop UI recovery, and 320px creation/editing.
-- [ ] Apply pending M4 migration `202610030001_optional_manual_estimate.sql`, then M4.5 migration `202610030002_task_classification.sql` to the hosted project.
-- [ ] Repeat the M4 and M4.5 flows against hosted Supabase with an authenticated browser, including real timer completion/correction/void, persisted classification edits, archived references, refresh, mobile workflows, and ownership checks.
+- [x] Apply pending M4 migration `202610030001_optional_manual_estimate.sql`, then M4.5 migration `202610030002_task_classification.sql` to the hosted project. (Done 2026-10-04 — see hosted checkpoint.)
+- [x] Repeat the M4 and M4.5 flows against hosted Supabase with an authenticated browser, including real timer completion/correction/void, persisted classification edits, archived references, and refresh. (Passed 2026-10-04 — see hosted checkpoint. Mobile workflows and cross-account ownership checks remain unverified.)
 
 ### Classification architecture and semantics
 
@@ -221,7 +222,7 @@ Apply both pending migrations in order and finish the hosted acceptance checklis
 
 ---
 
-## Milestone 4 — Deterministic duration estimation — implemented, hosted acceptance pending 2026-10-03
+## Milestone 4 — Deterministic duration estimation — implemented and hosted-accepted 2026-10-04
 
 The authorized scope was persisted task/session history → deterministic prediction → effective estimate → Momentum/Today/Week. M4 originally used category/global matching; its course/task-type deferral was implemented in Milestone 4.5 above. The mathematical and manual-precedence decisions below remain in effect.
 
@@ -651,13 +652,13 @@ Do not claim completion if relevant checks fail.
 
 ## Task 2 — Connect Supabase
 
-- [ ] Create Supabase project.
-- [ ] Add required environment variables.
-- [ ] Create browser/client Supabase helper.
-- [ ] Create server Supabase helper.
-- [ ] Confirm a server-side database request succeeds.
-- [ ] Add typed database support if generated types are used.
-- [ ] Document local environment setup in README.
+- [x] Create Supabase project. (Done 2026-09-29; hosted "Task Manager" project live and verified 2026-10-04.)
+- [x] Add required environment variables. (`.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; same vars set on the Netlify deploy 2026-10-04.)
+- [x] Create browser/client Supabase helper. (`lib/supabase/client.ts`)
+- [x] Create server Supabase helper. (`lib/supabase/server.ts`)
+- [x] Confirm a server-side database request succeeds. (Verified through app flows and SQL Editor 2026-10-04.)
+- [x] Typed database support — N/A: explicit TypeScript domain types are used instead of generated types (see AGENTS.md).
+- [x] Document local environment setup in README. (README "Set up Supabase" section.)
 
 ### Acceptance Criteria
 
@@ -668,7 +669,7 @@ Do not claim completion if relevant checks fail.
 
 ### Implementation Notes
 
-_Add notes here when complete._
+- Completed 2026-09-29 with the M2 persistence milestone; reconfirmed against the hosted project 2026-10-04 (all six migrations applied, RLS/policies/RPCs verified, app flows passing).
 
 ---
 
@@ -898,8 +899,8 @@ Implement:
 - [x] Reopen task.
 - [x] Archive/delete task behavior.
 - [x] Assign category.
-- [x] Assign course (M4.5; hosted acceptance pending).
-- [x] Assign task type (M4.5; hosted acceptance pending).
+- [x] Assign course (M4.5; hosted acceptance passed 2026-10-04).
+- [x] Assign task type (M4.5; hosted acceptance passed 2026-10-04).
 - [x] Assign priority.
 - [ ] Assign due date/time.
 - [x] Assign scheduled date.
@@ -1046,7 +1047,7 @@ Required:
 - [x] Require a reasonable minimum history before displaying a strong prediction.
 - [x] Return metadata describing prediction source.
 - [x] Derive predicted duration when needed; snapshot persistence deferred to Milestone 6.
-- [x] Allow manual estimate to remain visible separately (signed-in browser acceptance pending).
+- [x] Allow manual estimate to remain visible separately (signed-in browser acceptance passed 2026-10-04).
 
 Possible return shape:
 
@@ -1076,7 +1077,7 @@ type DurationPrediction = {
 
 ### Implementation Notes
 
-2026-10-03: Pure estimator, nullable manual override, retained task history, shared Momentum/Today/Week calculations, and compact estimate details implemented. Algorithm, eligibility, parameters, tests, migration instructions, and pending hosted/browser acceptance are recorded in Milestone 4 above. Do not mark M4 fully accepted until those pending checks pass.
+2026-10-03: Pure estimator, nullable manual override, retained task history, shared Momentum/Today/Week calculations, and compact estimate details implemented. Algorithm, eligibility, parameters, tests, migration instructions, and pending hosted/browser acceptance are recorded in Milestone 4 above. The pending checks passed against hosted Supabase 2026-10-04 — M4 is accepted (mobile and cross-account checks deferred).
 
 2026-10-03: M4.5 adds independent course/task-type records and all comparison levels without changing estimation mathematics or effective-estimate precedence. See the M4.5 ledger for local SQL/browser evidence and remaining hosted acceptance.
 
@@ -1276,7 +1277,7 @@ Where practical, add integration tests for:
 - [ ] Authentication-protected routes.
 - [ ] Task creation.
 - [x] Timer lifecycle.
-- [x] Reading-session creation (local PostgreSQL + browser fixture; hosted pending).
+- [x] Reading-session creation (local PostgreSQL + browser fixture; hosted passed 2026-10-04).
 
 ### Acceptance Criteria
 
