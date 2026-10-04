@@ -18,7 +18,7 @@ Scope for this checkpoint is hosted M4–M5 migrations and focused authenticated
 
 ### Git and repository evidence
 
-Actual repository: `Task-Manager/Task-Manager`. Read `AGENTS.md`, `PROJECT_OVERVIEW.md`, this plan and the actual migration scripts. Branch `main`; HEAD `df51f0ee16fef78d5c2a6db2079a130ec99b5e57`; working tree was clean at inspection. Upstream is `origin/main`, remote `https://github.com/BenjaminRoder/Task-Manager.git`. After a successful `git fetch origin --prune`, HEAD was 4 commits ahead and 0 behind the upstream. This checkpoint changes this plan only; no commit or push was performed.
+Actual repository: `Task-Manager/Task-Manager`. Initial 2026-10-03 review read `AGENTS.md`, `PROJECT_OVERVIEW.md`, this plan and the actual migration scripts; HEAD was `df51f0ee16fef78d5c2a6db2079a130ec99b5e57`, initially clean and 4 commits ahead of `origin/main`. For authenticated acceptance on 2026-10-04, `git fetch origin --prune` and `git pull --ff-only origin main` succeeded (already up to date): branch `main`, HEAD `64be5024bacb3b7e35913d2b67ff85d92d8d28d3`, upstream `origin/main`, 0 ahead / 0 behind. Remote is `https://github.com/BenjaminRoder/Task-Manager.git`. The user's staged hosted-checkpoint update was preserved; acceptance results modify only this plan in the repository. No commit or push was performed.
 
 ### Exact migration review, in application order
 
@@ -58,12 +58,45 @@ Earlier 2026-10-03 notes (superseded): Codex's sandbox/browser connection failed
 
 | Authenticated app check | Result in this checkpoint |
 | --- | --- |
-| Course/Task Type/Topic creation and task assignment survive reload | Not verified — needs signed-in app-flow check; schema, RLS, and `save_task_with_topics` RPC verified live 2026-10-04 |
-| Manual `estimated_minutes` save/load | Not verified — needs signed-in app-flow check; column is nullable live as of 2026-10-04 |
-| Timer sessions persist and eligible completed history produces a derived prediction | Not verified — needs signed-in app-flow check (unchanged by this checkpoint; no migration touched timers) |
-| Book/Reading Session persist with correct progress and weekly totals | Not verified — needs signed-in app-flow check; tables, guards, view, and both RPCs verified live 2026-10-04 |
+| Course/Task Type/Topic creation and task assignment survive reload | Passed 2026-10-04 — created all three in the authenticated app, assigned them to the QA task, reloaded, and verified both task badges and reopened editor selections |
+| Manual `estimated_minutes` save/load | Passed 2026-10-04 — created at 45 minutes, reloaded and confirmed editor value; updated to 37 minutes, reloaded and confirmed both displayed estimate and editor value |
+| Timer sessions persist and eligible completed history produces a derived prediction | Passed 2026-10-04 — active session survived reload and sign-out/sign-in; stopped/corrected history persisted; 3 completed QA observations of 10/20/40 minutes produced a 30-minute category prediction with blank manual estimate. See dated timer acceptance and monitoring observations below. |
+| Book/Reading Session persist with correct progress and weekly totals | Passed 2026-10-04 — 200-page book with initial page 10 and weekly goal 50; logged 10→30 on 2026-10-04 with 15 minutes; reload preserved page 30, 20 pages today/this week, 30 pages remaining to weekly goal, 40% goal attainment, and session history |
 
-Use a dedicated account or clearly named reversible QA records when access is restored; do not alter real task/reading history. Schema inspection alone will not satisfy these app-flow checks. No full test suite was run for this documentation-only checkpoint. Prior local/fixture test evidence below remains separate and does not establish hosted correctness. Hosted acceptance remains incomplete and M6 has not been started.
+### Authenticated acceptance evidence — 2026-10-04 (Codex)
+
+Ran the real repository app at `http://127.0.0.1:3001/today` and `/reading` against hosted project `sbyqkfggwqmgbzjzumgq`, using installed Playwright/Chrome at 1440×1000 with America/New_York timezone. The Browser plugin/skill is not available; in-app tab access additionally failed with `windows sandbox failed: helper_unknown_error: setup refresh had errors`. A fresh Chrome QA session provided the working fallback. The user signed in interactively and explicitly authorized their existing account because no dedicated test account was available. No credentials or session tokens were read, copied or saved by the QA scripts.
+
+All test records were uniquely named with prefix `QA Hosted 2026-10-04 mutbc6xv` and suffixes Course, Type, Topic, Task or Book. Actions used actual app controls and the existing production adapters, without mocks, local-storage data fixtures, direct SQL, RLS bypass or migration replay. Hosted request evidence includes creation responses HTTP 201 for courses/types/topics, HTTP 204 for `save_task_with_topics`, `save_reading_book` and `log_reading_session`, and HTTP 200 reload reads of tasks, classifications, `books_with_progress` and reading sessions. All 177 observed hosted REST requests through the flow/final verification succeeded. This demonstrates authenticated app persistence, separately from the earlier schema inspection and local tests; it does not establish cross-account isolation.
+
+QA cleanup passed and survived reload: the QA task was soft-deleted; its course/type/topic and book were archived; only its Reading Session was voided, retaining recoverable history. The archived QA book returned to initial page 10 and this week's logged pages returned to 0, keeping the test session out of totals. No real task or reading history was mutated, and no timer sessions were created or modified. QA audit records intentionally remain archived/soft-deleted/voided under the repository retention design.
+
+Today and Reading both rendered their expected titles/headings and functional controls. Card screenshots were reviewed and show the reloaded classification/manual estimate and Reading progress/weekly totals. Final verification with a fresh console baseline had no console errors or warnings and no failed hosted requests. The earlier browser buffer contained one HTTP 404 and one HTTP 400 console resource entry without resource URLs; their origin was not established, and they did not recur during final verification. No application page exceptions were observed.
+
+Evidence is saved outside the repository in `C:/Users/jacku/.codex/visualizations/2026/10/03/01a1040d-5c19-7371-9a6a-5b493290f9eb/`: `hosted-qa-results.json`, `hosted-qa-verification.json`, `hosted-task-qa.png` and `hosted-reading-qa.png`. Temporary QA scripts also stay outside committed source. No full local test suite was rerun for this hosted acceptance; the 80/80 local result recorded by Muse remains separate. The three requested hosted flows pass. Timer/prediction acceptance, mobile/sign-out/sign-in acceptance, broader session corrections/time-source scenarios and cross-account ownership testing remain unverified by this run. M6 has not been started.
+
+### Timer and prediction hosted acceptance — 2026-10-04 (Codex)
+
+Pulled `main` using `git fetch origin --prune` and `git pull --ff-only origin main`: already up to date at `64be5024bacb3b7e35913d2b67ff85d92d8d28d3`, tracking `origin/main`, 0 ahead / 0 behind. Existing staged and unstaged plan edits were preserved. Used the real app at `http://127.0.0.1:3001/today` in installed Playwright/Chrome, 1440×1000, America/New_York, against hosted Supabase project `sbyqkfggwqmgbzjzumgq`. The user interactively signed into the authorized account initially and again after the app's Sign out action. No credentials/session tokens were read or saved by the QA scripts. No application refactor, migration replay, scope change, full-suite run, commit or push occurred; M6 remains untouched.
+
+The exact first task name was **QA timer check**. A new isolated category, **QA Timer 2026-10-04 mutc16o0 Category**, kept prediction observations separate from real history. Other task names used that unique QA prefix. Every action used actual app controls and authenticated production adapters. The following supersedes the earlier timer/prediction unverified status for these specific desktop flows only.
+
+| Requested step | Result | Observed hosted/app evidence |
+| --- | --- | --- |
+| 1. Create task, start timer, reload | Pass | Running clock advanced from `00:00:02` before reload to `00:00:04` afterward. The active session remained the same, with original start `2026-10-04T00:41:15.680068-04:00`. |
+| 2. Sign out and sign back in | Pass | App displayed Sign in after sign-out. After interactive reauthentication, the same session ID/start timestamp returned, still active at `00:02:43`; elapsed time matched wall time within the QA tolerance. |
+| 3. Stop and inspect Time history | Pass | Hosted stopped duration was `164.684218` seconds; Time history showed `00:02:44`, and task actual showed `2 min`. Session end/start difference agreed with generated duration. |
+| 4. Correct start/end timestamps | Pass | Both local inputs changed to `2026-10-04T00:33:00.364` and `2026-10-04T00:43:00.364`. History became `00:10:00`, actual changed from `2 min` to `10 min`, hosted duration became exactly `600` seconds, and actual survived reload. No correction alerts/errors occurred. |
+| 5. Three completed timed tasks and prediction | Pass | First corrected QA task plus two additional started/stopped/corrected QA tasks were completed in the isolated category. Retained stopped durations were 10, 20 and 40 minutes (600/1200/2400 seconds). New QA task had hosted `estimated_minutes = NULL`, displayed Manual: Automatic and Prediction: **30 min**, and showed **3 recent category completed tasks · medium confidence**. Prediction survived reload. Rank-weighted history is `(40×3 + 20×2 + 10×1)/6 = 28.33` minutes, rounded to 30 by the existing 5-minute rule; this is not the 25-minute default. |
+| 6. Console/request monitoring throughout | Pass, with observations reported | No console warnings/errors or page exceptions during the timer flow, and no hosted HTTP 4xx/5xx responses. Of 453 monitored hosted request/response events, the logout POST returned HTTP 204 and subsequently emitted Chrome `net::ERR_ABORTED`; sign-out and reauthentication recovery still passed. Before the QA flow, local `/favicon.ico` returned 404 and produced one console error. These observations were recorded, not suppressed. |
+
+All three `start_task_timer` RPCs returned HTTP 200; all three `stop_task_timer` RPCs returned HTTP 204. Six `time_sessions` PATCH requests (three corrections and three voids) returned HTTP 200. Task creation/completion/cleanup and category creation/archive also succeeded. Temporary harness locator/controlled-checkbox assertions required adaptation to the existing UI's asynchronous updates; hosted writes succeeded, and no product code was changed.
+
+**Cleanup passed and survived reload.** The app has no separate task-archive control, so its existing Delete action soft-deleted the four QA tasks while retaining their historical records. All three QA sessions were voided before task removal; QA task actuals returned to `0 sec`, the QA category was archived, and no active timer remained. Voided sessions no longer contribute to actual time or prediction observations. No QA book/reading session was created in this run.
+
+Before/after canonical row comparisons (in memory, with no personal field values exported) confirmed **zero changed or missing pre-existing rows**: tasks 3, time_sessions 6, books_with_progress 1, reading_sessions 1, categories 1. These baselines include every row loaded by the authenticated adapters before QA creation, including previous retained QA history. This independently confirms that existing task and reading history were untouched by the run.
+
+Evidence remains outside the repository in the same visualization directory above: `timer-qa-results.json`, `timer-reload-qa.png`, `timer-corrected-qa.png`, `timer-prediction-qa.png`, plus temporary QA scripts. Screenshots were reviewed; final app inspection found no error alerts/framework dialog. The temporary Chrome QA session and dev server were closed after verification. Mobile, cross-account isolation and broader Reading correction/time-source acceptance remain unverified; successful timer reauthentication is not a claim that all those checks pass.
 
 ---
 
@@ -80,7 +113,7 @@ Use a dedicated account or clearly named reversible QA records when access is re
 - [x] 15 added automated tests (9 calculation/validation, 3 adapter, 3 real PostgreSQL integration); all 80 tests pass, retaining all 65 task/classification/topic/prediction/workload/timer tests.
 - [x] Lint, typecheck and production build pass; all six migrations execute under embedded PostgreSQL and Reading ownership checks pass.
 - [x] Isolated desktop/320px browser fixture: add/start/log, quota/current-page updates, refresh, session correction, overlap marker, manual progress/history preservation, completion, archive/restore, removed history and actual-form pace/projection. Existing task/classification/topic/estimation/timer browser fixture also passes.
-- [ ] Apply M5 migration to hosted Supabase after pending M4/M4.5/M4.6 migrations.
+- [x] Apply M5 migration to hosted Supabase after M4/M4.5/M4.6 migrations — completed and verified 2026-10-04 in the hosted checkpoint above.
 - [ ] Authenticated hosted desktop/mobile acceptance, including sign-out/sign-in, real persistence/RLS, corrections and task/reading time-source behavior.
 
 ### Book and session semantics
