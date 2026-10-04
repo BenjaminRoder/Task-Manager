@@ -156,10 +156,7 @@ function SessionGate({ children }: { children: ReactNode }) {
           </button>
         </form>
         {error && <p role="alert">{error}</p>}
-        <p>
-          Use the account created in Supabase. Account setup instructions are in
-          README.md.
-        </p>
+        <p>Sign in with your Task Manager account.</p>
       </section>
     );
   return (
