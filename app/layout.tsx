@@ -1,4 +1,25 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Newsreader } from "next/font/google";
+
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex-sans",
+  display: "swap",
+});
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-mono",
+  display: "swap",
+});
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: "variable",
+  axes: ["opsz"],
+  variable: "--font-newsreader",
+  display: "swap",
+});
 import { Navigation } from "@/components/navigation/navigation";
 import "./globals.css";
 import { AuthGate } from "@/components/auth/auth-gate";
@@ -13,7 +34,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>
+      <body className={`${plexSans.variable} ${plexMono.variable} ${newsreader.variable}`}>
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>

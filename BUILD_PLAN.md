@@ -12,6 +12,18 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Clear Studio visual reskin — verified 2026-10-04
+
+### Implementation Notes
+
+- 2026-10-04: Restyled existing selectors in app/globals.css with the exact Clear Studio light/dark palette, orange action/active states, Paper Ledger Newsreader headlines, IBM Plex Sans UI, and IBM Plex Mono timer/stat/micro-label typography. Added the requested radii, circular checkboxes, accent focus outlines, panel spacing, and elevated-surface shadow. Existing layout structure and responsive breakpoints remain intact.
+- app/layout.tsx changes are limited to next/font/google imports, font definitions, and body font-variable wiring. Newsreader uses variable weight (including 500/650) with its optical-size axis.
+- Category dots and inline user-selected colors remain untouched. Exact course/personal chip tokens and optional data-kind CSS hooks are defined; existing badges have no semantic kind attribute, so they retain a neutral pill surface rather than guessing category type. Activating distinct kind palettes would require a separately authorized component markup change.
+- PASS: npm run lint; npm run typecheck; npm test (98/98); npm run build; npm run test:analytics-ui; npm run test:classification-ui; npm run test:reading-ui. All three browser scripts verified their existing desktop/320px flows and overflow assertions with local fixtures.
+- Additional actual-app browser verification: signed-out Today at 1440px and 320px in both light and dark mode, no horizontal overflow, correct computed palette, IBM Plex Sans body and Newsreader 650 headings. Screenshots visually inspected. Existing UI fixture layouts do not wire next/font themselves; actual font wiring was verified in the real app separately.
+- No application logic, schema, migration, RLS, data-driven category color, or component markup changes beyond font wiring. No commit or push. Development preview left running at http://127.0.0.1:3000.
+
+---
 ## UI polish — completed and verified 2026-10-04
 
 - [x] 2026-10-04 sign-in copy polish: replaced the developer-facing account/setup paragraph with “Sign in with your Task Manager account.” The signed-out sign-in panel contains no Supabase/README/setup guidance; the separate missing-configuration setup panel is unchanged. No form, input, button, auth behavior, schema, migration, or RLS changes. `npm run lint`, `npm run typecheck`, `npm test` (**98/98**), and `npm run build` PASS; no commit or push.
