@@ -1,10 +1,5 @@
-import { FutureSection } from "@/components/future-section";
+import { AnalyticsBoard } from "@/components/analytics/analytics-board";
 export const metadata = { title: "Analytics" };
 export default function AnalyticsPage() {
-  return (
-    <FutureSection
-      title="Analytics"
-      description="Understand where your time goes."
-    />
-  );
+  return <AnalyticsBoard />;
 }

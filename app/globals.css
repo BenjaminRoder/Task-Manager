@@ -1142,3 +1142,26 @@ details.task-duration p {
 
 .reading-add { margin:16px 0; }
 .reading-add > summary { color:var(--accent); padding:8px 0; cursor:pointer; }
+.analytics-board { display: grid; gap: 20px; }
+.analytics-controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; }
+.analytics-controls label { display: grid; gap: 4px; font-weight: 600; }
+.analytics-controls input, .analytics-controls select { padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: white; min-width: 0; }
+.analytics-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.analytics-summary article, .analytics-panel { border: 1px solid var(--border); border-radius: 8px; padding: 16px; min-width: 0; }
+.analytics-summary h2 { font-size: 13px; color: var(--muted); font-weight: 500; }
+.analytics-summary strong { font-size: 24px; letter-spacing: -.5px; }
+.analytics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.analytics-panel h2 { font-size: 18px; margin-bottom: 8px; }
+.analytics-panel h3 { font-size: 15px; overflow-wrap: anywhere; }
+.analytics-bars, .analytics-comparisons { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px; }
+.analytics-bars li > div { display: flex; justify-content: space-between; gap: 12px; }
+.analytics-bars li > div span { overflow-wrap: anywhere; min-width: 0; }
+.analytics-bars strong { white-space: nowrap; font-size: 13px; }
+.analytics-track { display: block; height: 6px; background: var(--rail); margin-top: 5px; border-radius: 3px; overflow: hidden; }
+.analytics-track > span { display: block; height: 100%; background: var(--accent); }
+.analytics-comparisons { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.analytics-comparisons li { padding: 12px; background: var(--rail); border-radius: 6px; min-width: 0; }
+.analytics-comparisons progress { width: 100%; accent-color: var(--accent); }
+@media (max-width: 650px) { .analytics-grid { grid-template-columns: 1fr; } .analytics-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .analytics-summary article { padding: 12px; } .analytics-summary strong { font-size: 20px; } .analytics-controls { align-items: stretch; } }
+.analytics-estimate > span { background: #768c80; }
+.analytics-comparisons .analytics-track { margin-bottom: 8px; background: #e0e7e2; }

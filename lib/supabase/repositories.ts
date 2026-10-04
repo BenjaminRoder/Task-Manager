@@ -16,6 +16,8 @@ import { validateTopic, validateTopicIds } from "../classification/topic-rules.t
 
 import type { ReadingRepository } from "../reading/reading-repository.ts";
 import { createReadingRepository } from "./reading-repository.ts";
+import { createAnalyticsRepository } from "./analytics-repository.ts";
+import type { AnalyticsRepository } from "../analytics/analytics-repository.ts";
 
 export type TaskRow = {
   task_topics?: { topic_id: string }[];
@@ -117,6 +119,7 @@ export function createSupabaseRepositories(
   taskTypes: TaskTypeRepository;
   topics: TopicRepository;
   reading: ReadingRepository;
+  analytics: AnalyticsRepository;
 } {
   // Pin this repository to one account. Never let an in-flight old-account action
   // write into a newly signed-in account, even when browser auth changes tabs.
@@ -174,6 +177,7 @@ export function createSupabaseRepositories(
   }
   return {
     reading: createReadingRepository(client, userId),
+    analytics: createAnalyticsRepository(client, userId),
     topics: {
       async list() { return ((await list("topics")) as TaskTypeRow[]).map(taskTypeFromRow); },
       async create(input) {

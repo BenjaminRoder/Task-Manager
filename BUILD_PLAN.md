@@ -12,6 +12,54 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 6 — Analytics — locally implemented and verified 2026-10-04
+
+This request authorizes M6 after the hosted M4–M5 checkpoint below. The earlier checkpoint's “Do not begin M6” describes that historical checkpoint only; its schema and hosted evidence remain authoritative. No commit, push, hosted SQL, production data change, or deployment was performed for M6.
+
+### Implementation and schema choices
+
+- Added `supabase/migrations/202610040001_analytics.sql`, applied only to isolated embedded PostgreSQL after all M2–M5 migrations. It preserves existing tasks, timer sessions, books and reading sessions without rewriting/backfilling them.
+- `completion_estimates` is a narrow append-only snapshot table with compound owner/UUID identity, owner-matching restrictive task FK, unique owner/task/completion timestamp, creation timestamp, checks, period index, and owner-only SELECT RLS. Authenticated clients have no INSERT, UPDATE or DELETE grant; anonymous access is denied. No cached actual duration or duplicated task-estimate columns were introduced.
+- A non-callable SECURITY DEFINER trigger with an empty search path and explicit owner filtering captures a snapshot atomically after an incomplete → completed transition, after M3 closes any running timer. It stores nullable manual `estimated_minutes`, nullable derived prediction, effective minutes/source, prediction source and sample size. Manual → prediction → 25-minute default precedence remains intact. Snapshot generation failure rolls back completion; it cannot silently omit history.
+- Predictions use the existing six-level hierarchy, minimum three samples, newest twenty, N..1 rank weights, nearest-five rounding and five-minute floor. Soft-deleted completed history remains eligible; active/void/zero sessions and reopened tasks do not train. SQL uses bytewise ID ordering for exact completion-time ties; normal generated UUID IDs match the existing JavaScript ordering, while legacy mixed-case/punctuation IDs may order differently at an exact timestamp tie. This narrow deterministic tie limitation is explicit; no estimator behavior was changed.
+- Ordinary edits preserve a completed task's completion timestamp and its immutable snapshot. Reopening retains the old snapshot; recompletion captures a new one, matched with PostgreSQL microsecond precision. Existing/imported already-completed records intentionally have no retrospective snapshot: their historical predictions cannot be reconstructed honestly. Their count and recorded actuals still appear.
+
+### Analytics definitions and boundaries
+
+- Pure `lib/analytics/analytics.ts` calculations are separate from React and charts. All actual time derives from stopped, positive, valid, non-void `time_sessions`; active counters and mutable task estimates never supply actuals.
+- Weeks are Monday–Sunday; months are calendar months. Timer sessions are attributed in full to their local **start date**, using the displayed browser timezone (overnight sessions are not split). Completion counts use local completion date. Future calendar dates are excluded; selected periods can still show empty future days. Date-only reading logs are not timezone shifted.
+- Focused time = eligible task timer seconds + exclusive reading seconds. Date-period filtering happens **before** combination. Reading `time_source=reading` minutes are additive; `task_timer` minutes are contextual overlap only, displayed separately and never added again. Pages from both reading sources count; voided pages/minutes do not. Other manually tracked sessions are unsupported and labeled, not invented.
+- Current-week/current-month focus summaries remain anchored to today. The week/month selector and date control drive selected-period summaries, category/course/day breakdowns, comparisons and page charts. Category/course charts show timer time only because reading logs have no category/course relationship. Day charts show combined focused time. Current stored classification IDs supply labels/grouping, including archived references and explicit unassigned buckets.
+- Task counts include currently completed retained tasks (including soft deletion), once per task, in the selected completion period. Reopened tasks leave completion metrics until recompleted. Average task duration uses **lifetime** eligible session totals of timed completed tasks, excluding untimed tasks from the denominator; counts and denominator are shown. Period focus time instead uses the session start date.
+- Effective-estimate and independent prediction errors compare frozen completion values with current corrected lifetime actuals. Bias = actual − estimate (positive means underestimated); mean absolute error is minutes; mean absolute percentage error divides by actual minutes. Only positive actuals with the corresponding snapshot value contribute. Default effective estimates are labeled; missing historical snapshots/predictions and empty samples are unavailable, never zero-error accuracy or fabricated trends.
+- Reading progress is current, across retained books, independent of the period. Pages-by-week uses nonvoid ledger page ranges, groups by Monday, and includes only selected-period dates in partial edge weeks. Manual progress offsets do not fabricate logged pages.
+
+### Architecture and local verification
+
+- Added analytics domain snapshot types, pure calculations, a read-only repository interface and paginated owner-pinned Supabase adapter; wired it into the existing repository context. The route uses existing authenticated layout/navigation. Parallel loading, loading/empty/error states, reload recovery and focus refresh follow existing conventions; cloud errors never fall back to mock metrics.
+- `components/analytics/analytics-board.tsx` provides dense summaries, accessible text with CSS bar charts for categories/courses/days/pages and paired estimate/actual bars, accuracy sample counts, and reading progress. No new charting/state dependency or navigation was added. Existing Reading/classification UI fixtures gained only the required empty analytics adapter.
+- `tests/analytics.test.ts`: boundaries (Monday/Sunday, months, year/leap/DST/local midnight), session eligibility, retained tasks, category/course/day/unassigned groups, unresolved study values, overlap/date filtering, error math, lifetime actuals, microsecond snapshot selection, period-edge pages, current reading progress and honest empty states.
+- `tests/analytics-database.test.ts`: all migrations apply post-M5, row-for-row preservation of tasks/timers/books/reading, frozen snapshots, completion timestamp protection, reopen/recomplete/soft-delete retention, SQL/TypeScript estimator parity for all six levels and sample cap, active timer close, actuals after correction/void, reading correction/void, owner isolation, denied spoofing, compound FK, anonymous denial and read-only snapshots. `tests/analytics-repository.test.ts` covers paging, mapping, owner pinning and actionable failure handling.
+- Final verification 2026-10-04: `npm run lint` PASS (zero warnings), `npm run typecheck` PASS, `npm test` PASS **92/92** (all original 80 preserved, 12 analytics tests), `npm run build` PASS with `/analytics` generated, `npm run test:analytics-ui` PASS, and `git diff --check` PASS. No hosted test or rollout is implied.
+- `npm run test:analytics-ui`: isolated temporary Next app importing real production components and synthetic repositories; no hosted access. Desktop 1440×1000 and mobile 320×900 checks cover totals, overlap, estimate values/error, pages/progress, period switching, refresh, empty states, failed load/retry and horizontal overflow. The period control's label was fixed after the first fixture run exposed an exact-label lookup failure. Desktop/mobile screenshots were visually reviewed; no page exceptions. Screenshots are outside the repository in the current Codex visualization directory (`analytics-desktop.png`, `analytics-mobile.png`).
+
+### Intentionally unresolved decisions / limitations
+
+- **Study vs non-study productive classification is unresolved.** Section 14 gives no deterministic rule; actual categories lack `category_type`, course assignment is optional, and task types are user-defined. Both summaries say “Not classified,” return null, and their checklist items remain unchecked. No name-based guessing or new classification schema was introduced.
+- Historical snapshots cannot be backfilled accurately. Current classifications, corrected sessions and current book progress can change analytics; frozen estimates cannot. Browser timezone changes can regroup historical calendar dates. Overnight start-date attribution and the timed-only average denominator are explicit M6 choices.
+- The personal-use client loads paginated retained history; very large histories may eventually need server aggregation. Independent reads are not a single database snapshot; reload resolves concurrent edits. Exact-timestamp legacy-ID sort ties have the narrow SQL/JS collation limitation described above. Hosted migration/deployment and cross-account browser acceptance remain unperformed.
+
+### M6 hosted application checklist — 2026-10-04 (intentionally unchecked)
+
+- [ ] Review/backup production schema and confirm all M2–M5 migrations are present with no partial M6 application.
+- [ ] Apply `202610040001_analytics.sql` once to hosted Supabase using the approved deployment workflow; do not replay earlier SQL Editor migrations.
+- [ ] Confirm snapshot table/FK/index/RLS/grants and trigger installation; verify pre-existing tasks, sessions and books are preserved.
+- [ ] With authorized test accounts, verify completion (including active timer), manual/automatic/default snapshots, reload, reopen/recomplete, correction/void, and cross-account denial.
+- [ ] Deploy the verified application to Netlify after the database migration and confirm `/analytics` on desktop/mobile against authorized test data.
+- [ ] Resolve the study/non-study product rule in a separate authorized change before marking those metrics implemented.
+
+---
+
 ## Hosted database checkpoint — migrations M4/M4.5/M4.6/M5 applied and verified 2026-10-04
 
 Scope for this checkpoint is hosted M4–M5 migrations and focused authenticated acceptance only. Do not begin M6 Analytics.
@@ -1046,7 +1094,7 @@ Required:
 - [x] Implement weighted recent average.
 - [x] Require a reasonable minimum history before displaying a strong prediction.
 - [x] Return metadata describing prediction source.
-- [x] Derive predicted duration when needed; snapshot persistence deferred to Milestone 6.
+- [x] Derive predicted duration when needed; snapshot persistence implemented locally in Milestone 6; hosted M6 application pending.
 - [x] Allow manual estimate to remain visible separately (signed-in browser acceptance passed 2026-10-04).
 
 Possible return shape:
@@ -1130,18 +1178,19 @@ lib/analytics/
 
 Required metrics:
 
-- [ ] Total tracked time this week.
-- [ ] Total tracked time this month.
-- [ ] Study time.
-- [ ] Reading time.
-- [ ] Time by category.
-- [ ] Time by course.
-- [ ] Time by day.
-- [ ] Tasks completed.
-- [ ] Average task duration.
-- [ ] Estimated vs actual duration.
-- [ ] Prediction error.
-- [ ] Pages read per week.
+- [x] Total tracked time this week.
+- [x] Total tracked time this month.
+- [ ] Study time — unresolved classification rule; see M6 ledger.
+- [ ] Non-study productive time — unresolved classification rule; see M6 ledger.
+- [x] Reading time.
+- [x] Time by category.
+- [x] Time by course.
+- [x] Time by day.
+- [x] Tasks completed.
+- [x] Average task duration.
+- [x] Estimated vs actual duration.
+- [x] Prediction error.
+- [x] Pages read per week.
 
 ### Acceptance Criteria
 
@@ -1151,7 +1200,7 @@ Required metrics:
 
 ### Implementation Notes
 
-_Add notes here when complete._
+2026-10-04: Implemented and locally verified by the M6 ledger above. Hosted rollout remains unchecked; study/non-study classification remains explicitly unresolved.
 
 ---
 
@@ -1178,10 +1227,10 @@ Recommended layout:
 
 Required:
 
-- [ ] Responsive layout.
-- [ ] Empty states.
-- [ ] Human-readable duration formatting.
-- [ ] Date-period selector if feasible.
+- [x] Responsive layout.
+- [x] Empty states.
+- [x] Human-readable duration formatting.
+- [x] Date-period selector if feasible.
 
 ### Acceptance Criteria
 
@@ -1191,7 +1240,7 @@ Required:
 
 ### Implementation Notes
 
-_Add notes here when complete._
+2026-10-04: Implemented and locally verified by the M6 ledger above. Hosted rollout remains unchecked; study/non-study classification remains explicitly unresolved.
 
 ---
 
@@ -1267,7 +1316,7 @@ Required tests:
 - [x] Time-session aggregation.
 - [x] Daily workload calculation.
 - [x] Reading quota calculation.
-- [ ] Analytics date grouping.
+- [x] Analytics date grouping.
 - [x] Task sorting.
 - [x] Priority ordering.
 - [x] Deadline ordering.

@@ -6,6 +6,7 @@ import type { CourseRepository } from "../classification/course-repository";
 import type { TaskTypeRepository } from "../classification/task-type-repository";
 import type { TopicRepository } from "../classification/topic-repository";
 import type { ReadingRepository } from "../reading/reading-repository";
+import type { AnalyticsRepository } from "../analytics/analytics-repository";
 export const RepositoryContext = createContext<{
   tasks: TaskRepository;
   categories: CategoryRepository;
@@ -13,6 +14,7 @@ export const RepositoryContext = createContext<{
   taskTypes: TaskTypeRepository;
   topics: TopicRepository;
   reading: ReadingRepository;
+  analytics: AnalyticsRepository;
 } | null>(null);
 export function useRepositories() {
   const repositories = useContext(RepositoryContext);

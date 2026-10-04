@@ -50,7 +50,7 @@ function changeTask(id: string, update: (task: Task) => void) {
 
 export default function ClassificationFixture() {
   const [week, setWeek] = useState(false);
-  const repositories = useMemo(() => ({
+  const repositories = useMemo(() => ({ analytics: { listEstimates: async () => [] },
     tasks: {
       async list(includeDeleted = false) { return read().tasks.filter((task) => includeDeleted || !task.deletedAt); },
       async create(input: Parameters<typeof validateTask>[0]) {
