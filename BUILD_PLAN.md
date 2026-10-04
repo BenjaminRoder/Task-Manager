@@ -12,6 +12,50 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Hosted database checkpoint — repository review complete; hosted work blocked 2026-10-03
+
+Scope for this checkpoint is hosted M4–M5 migrations and focused authenticated acceptance only. Do not begin M6 Analytics. No commit or push is authorized.
+
+### Git and repository evidence
+
+Actual repository: `Task-Manager/Task-Manager`. Read `AGENTS.md`, `PROJECT_OVERVIEW.md`, this plan and the actual migration scripts. Branch `main`; HEAD `df51f0ee16fef78d5c2a6db2079a130ec99b5e57`; working tree was clean at inspection. Upstream is `origin/main`, remote `https://github.com/BenjaminRoder/Task-Manager.git`. After a successful `git fetch origin --prune`, HEAD was 4 commits ahead and 0 behind the upstream. This checkpoint changes this plan only; no commit or push was performed.
+
+### Exact migration review, in application order
+
+1. `202610030001_optional_manual_estimate.sql`: relaxes `tasks.estimated_minutes` NOT NULL and documents manual override/automatic estimation semantics. Existing values and the existing 1–1440 check remain intact. **The actual manual column is `estimated_minutes`; predictions are derived, not persisted.** The suggested overview names `manual_estimate_minutes` and `predicted_minutes` are not migration requirements. No new tables, RPCs or policies.
+2. `202610030002_task_classification.sql`: adds `courses` and `task_types` with owner/ID compound primary keys, names, archive and creation/update timestamps; courses also have optional `code`. Owner references restrict deletion; IDs/names/code have length checks and names are normalized unique per owner, including archives. Adds nullable `tasks.course_id`/`task_type_id`, owner-matching restrictive foreign keys and indexes; makes existing `category_id` nullable. Identity guards use existing `guard_record`. Replaces `guard_category_assignment` to support null/unchanged archived categories and adds `guard_task_classification` for active new assignments. Enables RLS on both new tables, with authenticated owner-only SELECT/INSERT/UPDATE and no DELETE grant. No callable application RPC is added.
+3. `202610030003_task_topics.sql`: adds `topics` (owner/ID, name, archive/timestamps, compound primary key, owner FK, normalized name uniqueness and identity guard) and `task_topics` (owner, task/topic IDs, creation timestamp, compound primary key and owner-matching restrictive FKs). Adds assignment guard/index, owner-only RLS and authenticated SELECT/INSERT/UPDATE on topics, SELECT/INSERT/DELETE on association links. `save_task_with_topics(text,jsonb,text[],uuid)` is an authenticated-only SECURITY INVOKER RPC that verifies the session identity and atomically saves a task/selection while retaining unchanged archived links. Its runtime DELETE intentionally removes deselected links; it is not a migration-time data deletion.
+4. `202610030004_reading.sql`: adds `books` with owner/text ID, title/optional author, total pages, progress offset, status, start/completion dates, optional weekly goal, archive/timestamps; adds `reading_sessions` with owner/UUID ID, owner-matching book FK, date, page range, generated `pages_read`, optional minutes, time source, void/timestamps. Compound ownership keys and restrictive FKs preserve records. Checks/guards enforce valid lengths, pages, finite dates, statuses, completion consistency, immutable identity, active-book logging and safe corrections. Both tables enable authenticated owner-only SELECT/INSERT/UPDATE RLS without DELETE grants. `books_with_progress` is a SECURITY INVOKER view deriving current page from offset plus nonvoid ledger pages. Authenticated-only invoker RPCs are `save_reading_book(text,jsonb,timestamptz,uuid)` (revision-checked saves/manual progress) and `log_reading_session(uuid,jsonb,uuid)` (idempotent logging). Ledger triggers advance book revision and reopen completed books if a correction reduces progress.
+
+No reviewed script drops tables/columns, renames objects, changes existing column types, or rewrites existing records at migration application. DROP NOT NULL relaxes constraints. Classification changes the existing category guard; ALTER TABLE/foreign-key validation and index creation can briefly lock existing tables. These scripts are not generally rerunnable: creation statements will fail on existing objects. Live preflight must rule out partial application and confirm existing columns, compound ownership keys, `guard_record`/category guard, role privileges and PostgreSQL support for the invoker view. Based on the user's reported four-table schema, the scripts are consistent with the missing features and preserve existing records; that reported schema has not been independently reconfirmed in this checkpoint.
+
+### Hosted evidence and application status
+
+The user reported a Healthy production project on 2026-10-03 with only `categories`, `local_imports`, `tasks`, `time_sessions`, RLS enabled and authenticated ownership policies. The user also reported an absent migration registry after earlier SQL Editor application. These are supplied observations, not new hosted evidence. No `supabase db push` was run, and M2/M3 must not be replayed from an empty registry.
+
+Browser inventory failed, retry/reset failed, and the computer-use connection failed before session discovery with `windows sandbox failed: helper_unknown_error: setup refresh had errors`. There is no usable interactive management connection in this run. No hosted SQL was executed, no migration failure occurred, no hosted/test records were created or changed, and no secrets were requested or stored. All four migrations remain pending confirmation/application, one at a time using the exact repository SQL through the Supabase SQL Editor, with success verified before proceeding.
+
+- [ ] Independently reconfirm hosted schema/prerequisites and partial-application state.
+  - Signed-in retry: user opened the production project in the in-app browser and reported local sign-in. Direct tab access still failed before connecting, including after browser-tool reset, with the same Windows sandbox initialization error. No additional hosted evidence or changes resulted. A read-only catalog preflight was prepared at `../hosted-supabase-preflight.sql` as an optional SQL Editor fallback; it has not been run or validated against the hosted database.
+- [ ] Apply/verify M4 optional manual estimate migration.
+- [ ] Apply/verify M4.5 classification migration.
+- [ ] Apply/verify M4.6 topic migration.
+- [ ] Apply/verify M5 reading migration.
+- [ ] Verify live columns, RLS/policies/grants, compound ownership FKs, guards, RPCs and invoker progress view.
+
+### Focused hosted checks
+
+| Authenticated app check | Result in this checkpoint |
+| --- | --- |
+| Course/Task Type/Topic creation and task assignment survive reload | Not verified — interactive connection unavailable |
+| Manual `estimated_minutes` save/load | Not verified — interactive connection unavailable |
+| Timer sessions persist and eligible completed history produces a derived prediction | Not verified — interactive connection unavailable |
+| Book/Reading Session persist with correct progress and weekly totals | Not verified — interactive connection unavailable |
+
+Use a dedicated account or clearly named reversible QA records when access is restored; do not alter real task/reading history. Schema inspection alone will not satisfy these app-flow checks. No full test suite was run for this documentation-only checkpoint. Prior local/fixture test evidence below remains separate and does not establish hosted correctness. Hosted acceptance remains incomplete and M6 has not been started.
+
+---
+
 ## Milestone 5 — Reading Tracker — implemented; hosted acceptance pending 2026-10-03
 
 ### Implemented and locally verified
