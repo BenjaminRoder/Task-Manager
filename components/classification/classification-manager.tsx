@@ -48,6 +48,7 @@ export function NamedClassificationManager({ course, label, records, disabled, o
   const id = useId();
   const noun = label ?? (course ? "course" : "task type");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -93,9 +94,11 @@ export function NamedClassificationManager({ course, label, records, disabled, o
       </form>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <p className="notice" role="status">{notice}</p>
+      <button type="button" className="secondary-button" aria-pressed={showArchived}
+        onClick={() => setShowArchived(!showArchived)}>Show archived</button>
       <ul className="category-list">
-        {[...records].sort((a, b) => Number(!!a.archivedAt) - Number(!!b.archivedAt) || a.name.localeCompare(b.name)).map((record) => (
-          <li key={record.id}>
+        {records.filter((record) => showArchived || !record.archivedAt).sort((a, b) => Number(!!a.archivedAt) - Number(!!b.archivedAt) || a.name.localeCompare(b.name)).map((record) => (
+          <li key={record.id} className={record.archivedAt ? "is-archived" : undefined}>
             <span>{"code" in record && record.code ? `${record.code} · ` : ""}{record.name}{record.archivedAt ? " (archived)" : ""}</span>
             <div className="row-actions">
               <button type="button" disabled={disabled} aria-label={`Edit ${noun} ${record.name}`} onClick={() => {

@@ -42,6 +42,39 @@ try {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(url);
+  // Exercise the actual management lists without touching hosted records.
+  async function verifyArchivedVisibility(section, noun, name) {
+    const toggle = section.getByRole("button", { name: "Show archived", exact: true });
+    const archive = section.getByRole("button", { name: `Archive ${noun} ${name}`, exact: true });
+    const restore = section.getByRole("button", { name: `Restore ${noun} ${name}`, exact: true });
+    assert.equal(await toggle.getAttribute("aria-pressed"), "false");
+    await archive.click();
+    await restore.waitFor({ state: "detached" });
+    await archive.waitFor({ state: "detached" });
+    await toggle.click();
+    await restore.waitFor();
+    await restore.click();
+    await archive.waitFor();
+    await toggle.click();
+    await archive.waitFor(); // Restored records remain visible with the filter off.
+    await toggle.click();
+    await archive.click();
+    await restore.waitFor(); // Archiving with the filter on keeps the row visible.
+    assert.match(await restore.locator("xpath=ancestor::li").innerText(), /\(archived\)/);
+    await toggle.click();
+    await restore.waitFor({ state: "detached" });
+    await toggle.click();
+    await restore.click();
+    await archive.waitFor();
+    await toggle.click();
+  }
+  await page.getByRole("button", { name: "Manage categories", exact: true }).click();
+  await verifyArchivedVisibility(page.getByRole("region", { name: "Your categories", exact: true }), "category", "School");
+  await page.getByRole("button", { name: "Close categories", exact: true }).click();
+  await page.getByText("Manage courses and task types", { exact: true }).click();
+  await verifyArchivedVisibility(page.getByRole("region", { name: "Courses", exact: true }), "course", "Accounting");
+  await verifyArchivedVisibility(page.getByRole("region", { name: "Task types", exact: true }), "task type", "Homework");
+  await page.getByText("Manage courses and task types", { exact: true }).click();
   await page.getByText("Manage topics", { exact: true }).click();
   const topicManager = page.locator("details").filter({ has: page.locator("summary", { hasText: /^Manage topics$/ }) });
   for (const name of ["Adjusting Entries", "Chapter 8"]) {
@@ -49,6 +82,7 @@ try {
     await topicManager.getByRole("button", { name: "Create topic", exact: true }).click();
     await topicManager.getByText(name, { exact: true }).waitFor();
   }
+  await verifyArchivedVisibility(page.getByRole("region", { name: "Topics", exact: true }), "topic", "Chapter 8");
   const topicForm = () => page.getByRole("form", { name: "Add a task", exact: true });
   await topicForm().getByText("Topics (optional)", { exact: true }).click();
   await topicForm().getByLabel("Task title").fill("Tagged study");
@@ -67,6 +101,8 @@ try {
   await topicManager.getByRole("button", { name: "Save topic", exact: true }).click();
   await tagged().getByText("Chapter Eight", { exact: true }).waitFor();
   await topicManager.getByRole("button", { name: "Archive topic Chapter Eight", exact: true }).click();
+  await topicManager.getByRole("button", { name: "Restore topic Chapter Eight", exact: true }).waitFor({ state: "detached" });
+  await topicManager.getByRole("button", { name: "Show archived", exact: true }).click();
   await tagged().getByText("Chapter Eight (archived)", { exact: true }).waitFor();
   assert.equal(await topicForm().getByLabel("Chapter Eight (archived)", { exact: true }).count(), 0);
   await tagged().getByRole("checkbox", { name: "Complete Tagged study", exact: true }).click();
@@ -159,6 +195,8 @@ try {
   await editCourse.getByLabel("Course name", { exact: true }).fill("Accounting I");
   await editCourse.getByRole("button", { name: "Save course", exact: true }).click();
   await page.getByRole("button", { name: "Archive course Accounting I", exact: true }).click();
+  await page.getByRole("button", { name: "Archive course Accounting I", exact: true }).waitFor({ state: "detached" });
+  await page.getByRole("region", { name: "Courses", exact: true }).getByRole("button", { name: "Show archived", exact: true }).click();
   await page.getByRole("button", { name: "Restore course Accounting I", exact: true }).waitFor();
   await row().getByRole("button", { name: "Edit Comparable homework", exact: true }).click();
   const taskEditor = page.getByRole("form", { name: "Edit Comparable homework", exact: true });
@@ -173,6 +211,8 @@ try {
   await editType.getByLabel("Task type name").fill("Research notes");
   await editType.getByRole("button", { name: "Save task type", exact: true }).click();
   await page.getByRole("button", { name: "Archive task type Research notes", exact: true }).click();
+  await page.getByRole("button", { name: "Archive task type Research notes", exact: true }).waitFor({ state: "detached" });
+  await page.getByRole("region", { name: "Task types", exact: true }).getByRole("button", { name: "Show archived", exact: true }).click();
   await page.getByRole("button", { name: "Restore task type Research notes", exact: true }).waitFor();
   await page.getByRole("button", { name: "Archive task type Homework", exact: true }).click();
   await page.getByRole("button", { name: "Restore task type Homework", exact: true }).waitFor();
@@ -212,7 +252,10 @@ try {
   await form().getByRole("button", { name: "Add task", exact: true }).click();
   await page.getByRole("article", { name: "Mobile title-only task", exact: true }).waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  await page.screenshot({ path: "C:/Users/jacku/.codex/visualizations/2026/10/03/01a1040d-5c19-7371-9a6a-5b493290f9eb/topics-mobile.png", fullPage: true });
+  if (process.env.CLASSIFICATION_SCREENSHOT_DIR) {
+    await mkdir(process.env.CLASSIFICATION_SCREENSHOT_DIR, { recursive: true });
+    await page.screenshot({ path: path.join(process.env.CLASSIFICATION_SCREENSHOT_DIR, "topics-mobile.png"), fullPage: true });
+  }
   assert.deepEqual(errors, []);
   console.log("PASS: local UI fixture — topics lifecycle/multiple selection/history/refresh/Week/mobile; classification management, optional capture, all six hierarchy levels plus fallback, explanations, manual override, Momentum, Today/Week, archived references, refresh, timer UI and 320px creation/editing. No hosted claims.");
 } finally {

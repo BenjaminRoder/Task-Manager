@@ -12,6 +12,15 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Management archive visibility — completed and verified 2026-10-04
+
+- [x] Add local **Show archived** controls, OFF by default, to Categories, Courses, Task types, Topics, and Reading books management lists.
+- Filtering uses existing `archivedAt` fields only during rendering. Active records remain visible; enabling the control includes archived records with existing archived labels and the app's muted color. Existing archive/restore callbacks reload records, so archiving hides a row immediately when OFF, keeps it visible when ON, and restoring makes it active in either view. Visibility resets on reload; no preference persistence was added.
+- Reused `secondary-button`, `aria-pressed`, React local state, and the existing `NamedClassificationManager` for independent Courses/Task types/Topics controls. No new component abstraction or dependency; assignment dropdowns, historical relationships, and archive semantics are unchanged. No deletion functionality, schema/migration/RLS changes, hosted database operations, commit, or push.
+- Validation: `npm run lint`, `npm run typecheck`, `npm test` (**92/92**), `npm run build`, `npm run test:classification-ui`, `npm run test:reading-ui`, and `git diff --check` PASS. Existing synthetic browser fixtures now verify archive visibility with both toggle states, restore behavior, and Reading reload defaults alongside retained dropdown/history/desktop/320px coverage. The existing test suite uses isolated embedded PostgreSQL; no application database migrations were run.
+
+---
+
 ## Milestone 6 — Analytics — locally implemented and verified 2026-10-04
 
 This request authorizes M6 after the hosted M4–M5 checkpoint below. The earlier checkpoint's “Do not begin M6” describes that historical checkpoint only; its schema and hosted evidence remain authoritative. No commit, push, hosted SQL, production data change, or deployment was performed for M6.
@@ -26,6 +35,7 @@ This request authorizes M6 after the hosted M4–M5 checkpoint below. The earlie
 
 ### Analytics definitions and boundaries
 
+- 2026-10-04 follow-up: finalized study/non-study productive classification in `lib/analytics/analytics.ts`. For eligible task timer sessions in the selected period, `course_id != null` → study and `course_id == null` → non-study productive (`courseId` in the domain model; omitted legacy values are treated as null). Each duration enters exactly one bucket. Historical retained tasks use their current course relationship; archived courses still count as study. No course names/IDs, category names, task types, or course archive state influence the calculation. Reading remains a separate bucket with its existing overlap/time definition unchanged. Existing summary cards display the calculated totals without UI classification logic or redesign.
 - Pure `lib/analytics/analytics.ts` calculations are separate from React and charts. All actual time derives from stopped, positive, valid, non-void `time_sessions`; active counters and mutable task estimates never supply actuals.
 - Weeks are Monday–Sunday; months are calendar months. Timer sessions are attributed in full to their local **start date**, using the displayed browser timezone (overnight sessions are not split). Completion counts use local completion date. Future calendar dates are excluded; selected periods can still show empty future days. Date-only reading logs are not timezone shifted.
 - Focused time = eligible task timer seconds + exclusive reading seconds. Date-period filtering happens **before** combination. Reading `time_source=reading` minutes are additive; `task_timer` minutes are contextual overlap only, displayed separately and never added again. Pages from both reading sources count; voided pages/minutes do not. Other manually tracked sessions are unsupported and labeled, not invented.
@@ -38,25 +48,26 @@ This request authorizes M6 after the hosted M4–M5 checkpoint below. The earlie
 
 - Added analytics domain snapshot types, pure calculations, a read-only repository interface and paginated owner-pinned Supabase adapter; wired it into the existing repository context. The route uses existing authenticated layout/navigation. Parallel loading, loading/empty/error states, reload recovery and focus refresh follow existing conventions; cloud errors never fall back to mock metrics.
 - `components/analytics/analytics-board.tsx` provides dense summaries, accessible text with CSS bar charts for categories/courses/days/pages and paired estimate/actual bars, accuracy sample counts, and reading progress. No new charting/state dependency or navigation was added. Existing Reading/classification UI fixtures gained only the required empty analytics adapter.
-- `tests/analytics.test.ts`: boundaries (Monday/Sunday, months, year/leap/DST/local midnight), session eligibility, retained tasks, category/course/day/unassigned groups, unresolved study values, overlap/date filtering, error math, lifetime actuals, microsecond snapshot selection, period-edge pages, current reading progress and honest empty states.
+- `tests/analytics.test.ts`: boundaries (Monday/Sunday, months, year/leap/DST/local midnight), session eligibility, retained tasks, category/course/day/unassigned groups, study/non-study exact-second totals, overlap/date filtering, error math, lifetime actuals, microsecond snapshot selection, period-edge pages, current reading progress and honest empty states.
+- 2026-10-04 classification follow-up unit evidence: six added tests cover course-assigned tasks, null/omitted course assignments independent of task/category text, reading-only and declared overlap exclusion, mixed independent totals, archived-course historical tasks without requiring metadata, and period/future/active/void/zero exclusions. Updated the previous null-placeholder assertion to 3600 study seconds and 0 non-study seconds. `npm run lint` PASS (zero warnings), `npm run typecheck` PASS, `npm test` PASS **98/98**, `npm run build` PASS, `npm run test:analytics-ui` PASS (desktop/320px synthetic fixtures), and `git diff --check` PASS. No schema, migration, RLS, task/course relationship, reading calculation, or archive-behavior changes; no commit or push.
 - `tests/analytics-database.test.ts`: all migrations apply post-M5, row-for-row preservation of tasks/timers/books/reading, frozen snapshots, completion timestamp protection, reopen/recomplete/soft-delete retention, SQL/TypeScript estimator parity for all six levels and sample cap, active timer close, actuals after correction/void, reading correction/void, owner isolation, denied spoofing, compound FK, anonymous denial and read-only snapshots. `tests/analytics-repository.test.ts` covers paging, mapping, owner pinning and actionable failure handling.
 - Final verification 2026-10-04: `npm run lint` PASS (zero warnings), `npm run typecheck` PASS, `npm test` PASS **92/92** (all original 80 preserved, 12 analytics tests), `npm run build` PASS with `/analytics` generated, `npm run test:analytics-ui` PASS, and `git diff --check` PASS. No hosted test or rollout is implied.
 - `npm run test:analytics-ui`: isolated temporary Next app importing real production components and synthetic repositories; no hosted access. Desktop 1440×1000 and mobile 320×900 checks cover totals, overlap, estimate values/error, pages/progress, period switching, refresh, empty states, failed load/retry and horizontal overflow. The period control's label was fixed after the first fixture run exposed an exact-label lookup failure. Desktop/mobile screenshots were visually reviewed; no page exceptions. Screenshots are outside the repository in the current Codex visualization directory (`analytics-desktop.png`, `analytics-mobile.png`).
 
 ### Intentionally unresolved decisions / limitations
 
-- **Study vs non-study productive classification is unresolved.** Section 14 gives no deterministic rule; actual categories lack `category_type`, course assignment is optional, and task types are user-defined. Both summaries say “Not classified,” return null, and their checklist items remain unchecked. No name-based guessing or new classification schema was introduced.
+- **Study vs non-study productive classification resolved 2026-10-04:** course assignment alone classifies task timer time, including historical tasks linked to archived courses; reading stays separate. See the finalized rule and test evidence above. The original M6 null placeholders are replaced by numeric totals.
 - Historical snapshots cannot be backfilled accurately. Current classifications, corrected sessions and current book progress can change analytics; frozen estimates cannot. Browser timezone changes can regroup historical calendar dates. Overnight start-date attribution and the timed-only average denominator are explicit M6 choices.
 - The personal-use client loads paginated retained history; very large histories may eventually need server aggregation. Independent reads are not a single database snapshot; reload resolves concurrent edits. Exact-timestamp legacy-ID sort ties have the narrow SQL/JS collation limitation described above. Hosted migration/deployment and cross-account browser acceptance remain unperformed.
 
-### M6 hosted application checklist — 2026-10-04 (intentionally unchecked)
+### M6 hosted application checklist — 2026-10-04 (hosted rollout remains unchecked)
 
 - [ ] Review/backup production schema and confirm all M2–M5 migrations are present with no partial M6 application.
 - [ ] Apply `202610040001_analytics.sql` once to hosted Supabase using the approved deployment workflow; do not replay earlier SQL Editor migrations.
 - [ ] Confirm snapshot table/FK/index/RLS/grants and trigger installation; verify pre-existing tasks, sessions and books are preserved.
 - [ ] With authorized test accounts, verify completion (including active timer), manual/automatic/default snapshots, reload, reopen/recomplete, correction/void, and cross-account denial.
 - [ ] Deploy the verified application to Netlify after the database migration and confirm `/analytics` on desktop/mobile against authorized test data.
-- [ ] Resolve the study/non-study product rule in a separate authorized change before marking those metrics implemented.
+- [x] Resolve the study/non-study product rule — authorized follow-up completed and locally verified 2026-10-04; no hosted operation required for this calculation-only change.
 
 ---
 
@@ -1180,8 +1191,8 @@ Required metrics:
 
 - [x] Total tracked time this week.
 - [x] Total tracked time this month.
-- [ ] Study time — unresolved classification rule; see M6 ledger.
-- [ ] Non-study productive time — unresolved classification rule; see M6 ledger.
+- [x] Study time — task timer time with `course_id != null`, including archived courses; see M6 ledger.
+- [x] Non-study productive time — task timer time with `course_id == null`; reading remains separate; see M6 ledger.
 - [x] Reading time.
 - [x] Time by category.
 - [x] Time by course.
@@ -1200,7 +1211,7 @@ Required metrics:
 
 ### Implementation Notes
 
-2026-10-04: Implemented and locally verified by the M6 ledger above. Hosted rollout remains unchecked; study/non-study classification remains explicitly unresolved.
+2026-10-04: Implemented and locally verified by the M6 ledger above. The authorized follow-up completes study/non-study classification from course assignment; reading remains separate. Hosted rollout remains unchecked.
 
 ---
 
@@ -1240,7 +1251,7 @@ Required:
 
 ### Implementation Notes
 
-2026-10-04: Implemented and locally verified by the M6 ledger above. Hosted rollout remains unchecked; study/non-study classification remains explicitly unresolved.
+2026-10-04: Implemented and locally verified by the M6 ledger above. Existing study/non-study summary cards now display domain-calculated course-assignment totals; reading remains separate. Hosted rollout remains unchecked.
 
 ---
 

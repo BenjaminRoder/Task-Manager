@@ -62,11 +62,16 @@ export function buildAnalytics(data: AnalyticsData, period: Period, today: strin
       overlappingSeconds: totals.overlappingMinutes * 60, focusedSeconds: timerSeconds + totals.readingMinutes * 60 };
   }
   const byCategory = new Map<string, number>(), byCourse = new Map<string, number>(), byDay = new Map<string, number>();
+  let studySeconds = 0, nonStudySeconds = 0;
   for (let date = period.start; date <= period.end; date = addCalendarDays(date, 1)) byDay.set(date, 0);
   const add = (map: Map<string, number>, key: string, value: number) => map.set(key, (map.get(key) ?? 0) + value);
   for (const {session, date} of timed) {
     if (date > today || !inPeriod(date, period)) continue;
     const task = taskMap.get(session.taskId);
+    // Current course relationships classify historical task timers too.
+    // Course metadata/archive state and separate reading logs play no role.
+    if (task?.courseId != null) studySeconds += session.durationSeconds!;
+    else nonStudySeconds += session.durationSeconds!;
     add(byCategory, task?.categoryId ?? "", session.durationSeconds!);
     add(byCourse, task?.courseId ?? "", session.durationSeconds!);
     add(byDay, date, session.durationSeconds!);
@@ -90,7 +95,7 @@ export function buildAnalytics(data: AnalyticsData, period: Period, today: strin
     [...map].map(([id, value]) => ({id, value, label: labels.find(row => row.id === id)?.name ?? (id ? "Retained classification" : missing)}))
       .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
   return { ...timeFor(period), week: timeFor(analyticsPeriod(today, "week")), month: timeFor(analyticsPeriod(today, "month")),
-    studySeconds: null, nonStudySeconds: null,
+    studySeconds, nonStudySeconds,
     completedCount: comparisons.length, timedCompletedCount: observed.length,
     averageTaskMinutes: observed.length ? observed.reduce((sum, row) => sum + row.actualMinutes, 0) / observed.length : null,
     byCategory: breakdown(byCategory, data.categories, "No category"), byCourse: breakdown(byCourse, data.courses, "No course"),

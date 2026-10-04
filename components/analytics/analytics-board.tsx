@@ -80,14 +80,14 @@ export function AnalyticsDashboard({data, today, timeZone}: {data: AnalyticsData
     ["Reading · exclusive time", formatActual(metrics.readingSeconds)],
     ["Tasks completed", String(metrics.completedCount)],
     ["Average timed task", duration(metrics.averageTaskMinutes)],
-    ["Study time", "Not classified"], ["Non-study productive time", "Not classified"],
+    ["Study time", formatActual(metrics.studySeconds)], ["Non-study productive time", formatActual(metrics.nonStudySeconds)],
   ];
   return <div className="analytics-board">
     <div className="analytics-controls"><div><label htmlFor="analytics-period">Period</label><select id="analytics-period" value={mode} onChange={event => setMode(event.target.value as "week" | "month")}><option value="week">Week</option><option value="month">Month</option></select></div>
       <label>Date within period<input type="date" value={anchor || today} onChange={event => { if (isDate(event.target.value)) setAnchor(event.target.value); }}/></label>
       <p>{period.start} – {period.end}<br/><span className="category-help">{timeZone} · Monday–Sunday weeks</span></p></div>
     <div className="analytics-summary">{cards.map(([label, value]) => <article key={label} aria-label={label}><h2>{label}</h2><strong>{value}</strong></article>)}</div>
-    <p className="category-help">Averages include {metrics.timedCompletedCount} completed tasks with recorded time; untimed tasks are excluded. Study and non-study totals need a defined classification rule.</p>
+    <p className="category-help">Averages include {metrics.timedCompletedCount} completed tasks with recorded time; untimed tasks are excluded. Study time is task timer time with a course assigned, including archived courses. Non-study productive time has no course assigned. Reading remains separate.</p>
     <p className="category-help">Reading marked as task-timer overlap: {formatActual(metrics.overlappingSeconds)} (context only, never added again). Other manually tracked sessions are not supported.</p>
     {!metrics.focusedSeconds && !metrics.completedCount && !metrics.pagesByWeek.some(row => row.value) ? <p className="empty-state">No activity in this period. Stop a task timer or log reading to start building your history.</p> : null}
     <div className="analytics-grid">

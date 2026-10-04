@@ -25,6 +25,7 @@ export function CategoryManager({
 }: CategoryManagerProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState(categoryColors[0].value);
@@ -171,15 +172,18 @@ export function CategoryManager({
           <p className="notice" role="status">
             {notice}
           </p>
+          <button type="button" className="secondary-button" aria-pressed={showArchived}
+            onClick={() => setShowArchived(!showArchived)}>Show archived</button>
           <ul className="category-list">
             {[...categories]
+              .filter((category) => showArchived || !category.archivedAt)
               .sort(
                 (a, b) =>
                   Number(!!a.archivedAt) - Number(!!b.archivedAt) ||
                   a.name.localeCompare(b.name),
               )
               .map((category) => (
-                <li key={category.id}>
+                <li key={category.id} className={category.archivedAt ? "is-archived" : undefined}>
                   <CategoryBadge category={category} />
                   <div className="row-actions">
                     <button

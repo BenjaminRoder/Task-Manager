@@ -27,7 +27,51 @@ test("only stopped positive nonvoid sessions count, including retained deleted t
     {...session,id:"zero",durationSeconds:0},{...session,id:"bad",durationSeconds:NaN},
     {...session,id:"reverse",endedAt:session.startedAt},{...session,id:"invalid",startedAt:"invalid"}]});
   assert.equal(result.focusedSeconds,3600);assert.equal(result.completedCount,1);assert.equal(result.averageTaskMinutes,60);
-  assert.equal(result.studySeconds,null);assert.equal(result.nonStudySeconds,null);
+  assert.equal(result.studySeconds,3600);assert.equal(result.nonStudySeconds,0);
+});
+test("course assignment alone classifies the full eligible task duration as study",()=>{
+  const result=analyze({tasks:[{...task,categoryId:null,taskTypeId:null}],sessions:[session]});
+  assert.equal(result.studySeconds,3600);assert.equal(result.nonStudySeconds,0);
+  assert.equal(result.studySeconds+result.nonStudySeconds,result.timerSeconds);
+});
+test("tasks without a course classify as non-study regardless of names or other classifications",()=>{
+  for(const courseId of [null,undefined]) {
+    const result=analyze({tasks:[{...task,courseId,title:"Study Accounting",taskTypeId:"homework"}],sessions:[session],
+      categories:[{id:"school",name:"School",color:"#123456",archivedAt:null}]});
+    assert.equal(result.studySeconds,0);assert.equal(result.nonStudySeconds,3600);
+    assert.equal(result.studySeconds+result.nonStudySeconds,result.timerSeconds);
+  }
+});
+test("reading and declared task-timer overlap contribute nothing to either task classification bucket",()=>{
+  const result=analyze({readingSessions:[reading,{...reading,id:"overlap",timeSource:"task_timer"}]});
+  assert.equal(result.studySeconds,0);assert.equal(result.nonStudySeconds,0);
+  assert.equal(result.readingSeconds,1800);assert.equal(result.overlappingSeconds,1800);
+  assert.equal(result.focusedSeconds,1800);
+});
+test("mixed task timers and reading produce independent exact-second totals",()=>{
+  const result=analyze({tasks:[task,{...task,id:"other",courseId:null}],
+    sessions:[session,{...session,id:"other",taskId:"other",durationSeconds:125}],readingSessions:[reading]});
+  assert.equal(result.studySeconds,3600);assert.equal(result.nonStudySeconds,125);
+  assert.equal(result.readingSeconds,1800);assert.equal(result.timerSeconds,3725);assert.equal(result.focusedSeconds,5525);
+});
+test("archived courses still classify retained historical tasks as study without requiring course metadata",()=>{
+  const historical={...task,deletedAt:"2026-10-04"};
+  const courses=[{id:"course",name:"Renamed course",code:null,archivedAt:"2026-10-01",createdAt:"",updatedAt:""}];
+  for(const metadata of [courses,[]]) {
+    const result=analyze({tasks:[historical],sessions:[session],courses:metadata});
+    assert.equal(result.studySeconds,3600);assert.equal(result.nonStudySeconds,0);
+  }
+});
+test("study and non-study totals retain period, future-date and session eligibility filtering",()=>{
+  const excluded=[{...session,id:"old",startedAt:"2026-09-27T14:00:00Z",endedAt:"2026-09-27T15:00:00Z"},
+    {...session,id:"future",startedAt:"2026-10-05T14:00:00Z",endedAt:"2026-10-05T15:00:00Z"},
+    {...session,id:"active",endedAt:null},{...session,id:"void",voidedAt:"2026-10-04"},
+    {...session,id:"zero",durationSeconds:0}];
+  for(const courseId of ["course",null]) {
+    const result=analyze({tasks:[{...task,courseId}],sessions:[session,...excluded]});
+    assert.equal(result.studySeconds,courseId===null?0:3600);
+    assert.equal(result.nonStudySeconds,courseId===null?3600:0);
+  }
 });
 test("period filtering precedes reading combination; overlap is contextual and pages remain counted",()=>{
   const result=analyze({sessions:[session],readingSessions:[reading,{...reading,id:"overlap",timeSource:"task_timer"},

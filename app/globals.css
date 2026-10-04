@@ -826,6 +826,13 @@ details.task-duration p {
 .category-list .row-actions {
   flex-shrink: 0;
 }
+.is-archived {
+  color: var(--muted);
+}
+.secondary-button[aria-pressed="true"] {
+  background: var(--rail);
+  border-color: var(--accent);
+}
 .week-toolbar {
   display: flex;
   justify-content: space-between;
