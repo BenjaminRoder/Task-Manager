@@ -12,9 +12,9 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
-## Hosted database checkpoint — repository review complete; hosted work blocked 2026-10-03
+## Hosted database checkpoint — migrations M4/M4.5/M4.6/M5 applied and verified 2026-10-04
 
-Scope for this checkpoint is hosted M4–M5 migrations and focused authenticated acceptance only. Do not begin M6 Analytics. No commit or push is authorized.
+Scope for this checkpoint is hosted M4–M5 migrations and focused authenticated acceptance only. Do not begin M6 Analytics.
 
 ### Git and repository evidence
 
@@ -29,28 +29,39 @@ Actual repository: `Task-Manager/Task-Manager`. Read `AGENTS.md`, `PROJECT_OVERV
 
 No reviewed script drops tables/columns, renames objects, changes existing column types, or rewrites existing records at migration application. DROP NOT NULL relaxes constraints. Classification changes the existing category guard; ALTER TABLE/foreign-key validation and index creation can briefly lock existing tables. These scripts are not generally rerunnable: creation statements will fail on existing objects. Live preflight must rule out partial application and confirm existing columns, compound ownership keys, `guard_record`/category guard, role privileges and PostgreSQL support for the invoker view. Based on the user's reported four-table schema, the scripts are consistent with the missing features and preserve existing records; that reported schema has not been independently reconfirmed in this checkpoint.
 
-### Hosted evidence and application status
+### Hosted evidence and application status — updated 2026-10-04 (Muse)
 
-The user reported a Healthy production project on 2026-10-03 with only `categories`, `local_imports`, `tasks`, `time_sessions`, RLS enabled and authenticated ownership policies. The user also reported an absent migration registry after earlier SQL Editor application. These are supplied observations, not new hosted evidence. No `supabase db push` was run, and M2/M3 must not be replayed from an empty registry.
+On 2026-10-04 the four pending migrations were applied to the hosted production project ("Task Manager", ref sbyqkfggwqmgbzjzumgq) through the Supabase dashboard SQL Editor, one at a time in repository order, each pasted verbatim from `main` and confirmed successful before proceeding. No `supabase db push` was used; M2/M3 were not replayed.
 
-Browser inventory failed, retry/reset failed, and the computer-use connection failed before session discovery with `windows sandbox failed: helper_unknown_error: setup refresh had errors`. There is no usable interactive management connection in this run. No hosted SQL was executed, no migration failure occurred, no hosted/test records were created or changed, and no secrets were requested or stored. All four migrations remain pending confirmation/application, one at a time using the exact repository SQL through the Supabase SQL Editor, with success verified before proceeding.
+Preflight (read-only, before any write):
+- Public schema held exactly `categories`, `local_imports`, `tasks`, `time_sessions`; none of the six new tables existed — no partial application.
+- `supabase_migrations.schema_migrations` does not exist (absent migration registry, as previously reported — SQL Editor path keeps no registry; this is expected, not an error).
+- `tasks.estimated_minutes` was NOT NULL; `tasks.category_id` was NOT NULL; `course_id`/`task_type_id` were absent.
+- PostgreSQL 17.6 (supports `security_invoker` views).
 
-- [ ] Independently reconfirm hosted schema/prerequisites and partial-application state.
-  - Signed-in retry: user opened the production project in the in-app browser and reported local sign-in. Direct tab access still failed before connecting, including after browser-tool reset, with the same Windows sandbox initialization error. No additional hosted evidence or changes resulted. A read-only catalog preflight was prepared at `../hosted-supabase-preflight.sql` as an optional SQL Editor fallback; it has not been run or validated against the hosted database.
-- [ ] Apply/verify M4 optional manual estimate migration.
-- [ ] Apply/verify M4.5 classification migration.
-- [ ] Apply/verify M4.6 topic migration.
-- [ ] Apply/verify M5 reading migration.
-- [ ] Verify live columns, RLS/policies/grants, compound ownership FKs, guards, RPCs and invoker progress view.
+Application record:
+- [x] `202610030001_optional_manual_estimate.sql` — applied OK ("Success. No rows returned."). `tasks.estimated_minutes` is now nullable; existing values and 1–1440 check intact.
+- [x] `202610030002_task_classification.sql` — applied OK. Tables `courses`, `task_types` created with RLS owner policies; `tasks.course_id`/`task_type_id` added (nullable), `tasks.category_id` now nullable; guards replaced/added.
+- [x] `202610030003_task_topics.sql` — applied OK. Tables `topics`, `task_topics` created with RLS owner policies; `save_task_with_topics(text,jsonb,text[],uuid)` RPC created (SECURITY INVOKER, authenticated-only). The dashboard showed a "destructive operations" warning because the function body contains a runtime DELETE of deselected links; this was confirmed as the intended, reviewed behavior — it is not a migration-time data deletion.
+- [x] `202610030004_reading.sql` — applied OK. Tables `books`, `reading_sessions` created with RLS owner policies; `books_with_progress` SECURITY INVOKER view created; `save_reading_book` and `log_reading_session` RPCs created (authenticated-only).
+
+Post-application verification (read-only):
+- [x] All six new tables exist: `courses`, `task_types`, `topics`, `task_topics`, `books`, `reading_sessions`. Full public schema is now 11 entries (10 tables + `books_with_progress` view).
+- [x] `rowsecurity = true` on all 10 public tables.
+- [x] All three RPCs present: `save_task_with_topics`, `save_reading_book`, `log_reading_session`.
+- [x] `public.books_with_progress` exists as a VIEW.
+- No data rows were created, modified, or deleted. Auth settings, API keys, and other projects untouched. Local test suite: 80/80 passing, including embedded-PostgreSQL migration tests, run 2026-10-04 before the hosted application.
+
+Earlier 2026-10-03 notes (superseded): Codex's sandbox/browser connection failed before any hosted access (`windows sandbox failed: helper_unknown_error`), so no hosted SQL was executed in that run. That blockage no longer applies — the work above was completed through the Supabase dashboard with the user's credentials.
 
 ### Focused hosted checks
 
 | Authenticated app check | Result in this checkpoint |
 | --- | --- |
-| Course/Task Type/Topic creation and task assignment survive reload | Not verified — interactive connection unavailable |
-| Manual `estimated_minutes` save/load | Not verified — interactive connection unavailable |
-| Timer sessions persist and eligible completed history produces a derived prediction | Not verified — interactive connection unavailable |
-| Book/Reading Session persist with correct progress and weekly totals | Not verified — interactive connection unavailable |
+| Course/Task Type/Topic creation and task assignment survive reload | Not verified — needs signed-in app-flow check; schema, RLS, and `save_task_with_topics` RPC verified live 2026-10-04 |
+| Manual `estimated_minutes` save/load | Not verified — needs signed-in app-flow check; column is nullable live as of 2026-10-04 |
+| Timer sessions persist and eligible completed history produces a derived prediction | Not verified — needs signed-in app-flow check (unchanged by this checkpoint; no migration touched timers) |
+| Book/Reading Session persist with correct progress and weekly totals | Not verified — needs signed-in app-flow check; tables, guards, view, and both RPCs verified live 2026-10-04 |
 
 Use a dedicated account or clearly named reversible QA records when access is restored; do not alter real task/reading history. Schema inspection alone will not satisfy these app-flow checks. No full test suite was run for this documentation-only checkpoint. Prior local/fixture test evidence below remains separate and does not establish hosted correctness. Hosted acceptance remains incomplete and M6 has not been started.
 
