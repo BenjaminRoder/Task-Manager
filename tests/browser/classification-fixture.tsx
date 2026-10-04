@@ -72,6 +72,15 @@ export default function ClassificationFixture() {
       async update(id: string, input: Pick<Course, "name"> & { code?: string | null }) { const data = read(); Object.assign(data.courses.find((row) => row.id === id)!, input); write(data); },
       async setArchived(id: string, archived: boolean) { const data = read(); data.courses.find((row) => row.id === id)!.archivedAt = archived ? new Date().toISOString() : null; write(data); },
     },
+    reading: {
+      async listBooks() { return []; }, async listSessions() { return []; },
+      async createBook() { throw new Error("Reading is outside this classification fixture"); },
+      async updateBook() { throw new Error("Reading is outside this classification fixture"); },
+      async setArchived() { throw new Error("Reading is outside this classification fixture"); },
+      async logSession() { throw new Error("Reading is outside this classification fixture"); },
+      async correctSession() { throw new Error("Reading is outside this classification fixture"); },
+      async removeSession() { throw new Error("Reading is outside this classification fixture"); },
+    },
     topics: {
       async list() { return read().topics; },
       async create(input: Pick<Topic, "name">) { const data = read(); data.topics.push({ ...input, id: crypto.randomUUID(), archivedAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); write(data); },

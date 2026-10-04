@@ -1,10 +1,3 @@
-import { FutureSection } from "@/components/future-section";
+import { ReadingBoard } from "@/components/reading/reading-board";
 export const metadata = { title: "Reading" };
-export default function ReadingPage() {
-  return (
-    <FutureSection
-      title="Reading"
-      description="Make steady progress, one page at a time."
-    />
-  );
-}
+export default function ReadingPage() { return <ReadingBoard />; }

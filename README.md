@@ -1,13 +1,13 @@
 # Personal Task Manager
 
-Private task management with Today, Tasks, Week, custom color categories, optional courses and task types, customizable topics, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers, correctable session history, and deterministic duration estimation are implemented. M4/M4.5/M4.6 hosted acceptance is pending. Analytics, reading, and calendar integration remain deferred.
+Private task management with Today, Tasks, Week, custom color categories, optional courses and task types, customizable topics, and Supabase-backed accounts. Momentum, Priority, and Deadline sorting remain independent of manual task priority. Completed tasks and soft-deleted records are retained. Persistent task timers, correctable session history, and deterministic duration estimation are implemented. Reading books, progress, correctable sessions and weekly goals are implemented. M4/M4.5/M4.6/M5 hosted acceptance is pending. Analytics and calendar integration remain deferred.
 
 See [BUILD_PLAN.md](BUILD_PLAN.md), [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), and [AGENTS.md](AGENTS.md).
 
 ## Set up Supabase (one time)
 
 1. Create a project at https://supabase.com/dashboard. Keep its database password private.
-2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. Then run `supabase/migrations/202609300001_time_sessions.sql`, `supabase/migrations/202610030001_optional_manual_estimate.sql`, `supabase/migrations/202610030002_task_classification.sql`, and `supabase/migrations/202610030003_task_topics.sql` once each, in that order. These create the owned records, constraints, indexes, triggers, RLS policies and RPCs, allow blank manual estimates, and add optional classification references. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
+2. Open the project's **SQL Editor**, create a query, paste the entire contents of `supabase/migrations/202609290001_milestone2.sql`, and run it **once**. Then run `supabase/migrations/202609300001_time_sessions.sql`, `supabase/migrations/202610030001_optional_manual_estimate.sql`, `supabase/migrations/202610030002_task_classification.sql`, `supabase/migrations/202610030003_task_topics.sql`, and `supabase/migrations/202610030004_reading.sql` once each, in that order. These create the owned records, constraints, indexes, triggers, RLS policies and RPCs, allow blank manual estimates, and add optional classification references. Do not create tables manually. Use a fresh project/schema; subsequent schema changes should be new migrations.
 
 3. In **Authentication → Sign In / Providers**, enable Email/password. Disable public signups for this private application. Under **Authentication → Users → Add user → Create new user**, create your email/password account and mark the email confirmed. There is intentionally no public registration or password-reset UI; manage the private account in the dashboard.
 4. Copy the project URL and **publishable** API key from the project's Connect/API settings. Never use a secret or service-role key. Create `.env.local` in the inner repository (next to `package.json`):
@@ -155,3 +155,18 @@ Topics describe specific subject matter and support zero/multiple assignments pe
 Apply pending M4, M4.5 and then `supabase/migrations/202610030003_task_topics.sql` once, in order, using authenticated SQL Editor or a correctly linked/tracked CLI. This migration adds owned `topics`, the compound-owner `task_topics` join and atomic `save_task_with_topics` RPC. Existing tasks remain unchanged and start without topics. No new configuration is needed. All three migrations and authenticated hosted acceptance remain pending in this session; see BUILD_PLAN for evidence and release gates.
 
 `npm test` includes embedded PostgreSQL topic lifecycle/RLS/atomicity and behavioral regressions. `npm run test:classification-ui` also exercises topic management, multiple selection, archived historical labels, refresh, Week and narrow editing in an explicitly synthetic local UI fixture. These do not claim hosted verification.
+
+
+## M5 Reading Tracker
+
+Use Reading to add books, set optional authors/weekly page goals, start/pause/complete reading and log pages with optional minutes. Book capture and logging collapse so active progress stays visible. Completed/archived books retain their session history; restore a book before logging again. History permits session correction and removal from totals while retaining the removed record.
+
+Current page is derived from a progress adjustment plus nonremoved ledger pages. Manual current-page edits adjust that offset without rewriting history or counting as logged quota pages. New sessions start at current page. Corrections change derived progress/quotas; if a correction would put progress outside the book, adjust current page first. A correction below the final page reopens a completed book. Book/session revisions prevent stale writes; explicit Reload reading discards the stale editor so you can reopen fresh data.
+
+Weeks run Monday–Sunday using local calendar session dates. Pace is logged pages per calendar day over up to the last 28 days, starting at the first logged date in that window and including nonreading days. Projections require three reading dates across seven days, use rounded-up remaining-pages/pace, and remain labeled estimates. No goal/history is handled without a fabricated quota or forecast.
+
+**Time rule:** record minutes here only for reading-exclusive time, or mark **Already tracked with a task timer**. Flagged minutes stay in history but are excluded from additive reading time; task timers remain the authoritative source for those minutes. Unmarked overlap cannot be detected automatically from date-only records. M6 must keep the two sources distinct.
+
+Apply pending M4/M4.5/M4.6 migrations and then `supabase/migrations/202610030004_reading.sql` once in order. No new environment variables are needed. M5 adds owned books/sessions, a security-invoker progress view, page/status/lifecycle guards, and atomic save/idempotent log RPCs. All four migrations and authenticated hosted acceptance remain pending here.
+
+Run `npm test` for calculation, adapter and embedded PostgreSQL tests (80 total). `npm run test:reading-ui` verifies real Reading components in an explicit synthetic desktop/320px fixture; `npm run test:classification-ui` retains existing task/topic/estimation/timer UI regressions. Neither fixture connects to hosted Supabase. See BUILD_PLAN for the exact evidence and M6 readiness.

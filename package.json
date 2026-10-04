@@ -10,7 +10,8 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "test:classification-ui": "node tests/browser/verify-classification-ui.mjs"
+    "test:classification-ui": "node tests/browser/verify-classification-ui.mjs",
+    "test:reading-ui": "node tests/browser/verify-reading-ui.mjs"
   },
   "engines": {
     "node": ">=22.18.0"

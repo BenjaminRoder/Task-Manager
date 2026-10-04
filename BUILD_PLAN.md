@@ -12,6 +12,50 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
+## Milestone 5 — Reading Tracker — implemented; hosted acceptance pending 2026-10-03
+
+### Implemented and locally verified
+
+- [x] User-owned Book and ReadingSession domain/repository models; add/edit/start/pause/complete books and archive/restore without deleting history.
+- [x] Optional author/minutes/weekly goal, validated page ranges, dates/status, timestamps and consistent manual progress semantics.
+- [x] Atomic book saves, idempotent session log requests, immutable record identities, optimistic edit/correction/archive revisions, retained removed sessions, book ownership FK, RLS and invoker-security progress view.
+- [x] Correctable session ledger; generated pages_read and derived current page; completion corrections reopen books when progress drops below the final page.
+- [x] Reading section centers on active books with compact capture/logging, progress, Monday-Sunday quotas, recent calendar-day pace, projection and retained completed/archived book/session history.
+- [x] Dedicated deterministic calculations for progress, today/week pages, goal percentage/remaining, remaining pages, pace/projection, completed books/year and exclusive/overlapping reading minutes.
+- [x] 15 added automated tests (9 calculation/validation, 3 adapter, 3 real PostgreSQL integration); all 80 tests pass, retaining all 65 task/classification/topic/prediction/workload/timer tests.
+- [x] Lint, typecheck and production build pass; all six migrations execute under embedded PostgreSQL and Reading ownership checks pass.
+- [x] Isolated desktop/320px browser fixture: add/start/log, quota/current-page updates, refresh, session correction, overlap marker, manual progress/history preservation, completion, archive/restore, removed history and actual-form pace/projection. Existing task/classification/topic/estimation/timer browser fixture also passes.
+- [ ] Apply M5 migration to hosted Supabase after pending M4/M4.5/M4.6 migrations.
+- [ ] Authenticated hosted desktop/mobile acceptance, including sign-out/sign-in, real persistence/RLS, corrections and task/reading time-source behavior.
+
+### Book and session semantics
+
+Migration `202610030004_reading.sql` adds `books`, `reading_sessions`, `books_with_progress`, guard triggers and invoker-security `save_reading_book`/`log_reading_session` RPCs. Existing task/classification/topic/timer data and estimation code are untouched. Explicit ReadingRepository is injected through the existing account-scoped repository context. It pages all retained books/sessions, pins Auth identity, reports errors, and never queries from presentation components. Missing hosted schema fails visibly; no production synthetic data or local fallback is introduced.
+
+Book statuses are Want to Read, Reading, Paused and Completed. Total pages are 1–100,000; current page is 0..total. Author is optional; weekly goal is null or a positive whole number. Started date is required outside Want to Read; completed date exists only for Completed, must not precede started date, and completion requires the final page. Mark completed is an explicit manual progress adjustment and does not invent session pages/time. Archived books remain inspectable/editable/restorable, but new logs require an active Reading book. No hard-delete grants/UI exist.
+
+Current page is **progress_offset + sum(nonvoid session end_page − start_page)**, computed by an RLS-respecting invoker view. Offset captures preexisting/unlogged progress. Editing current page atomically adjusts offset to the requested page while preserving every session; offset can be negative after a deliberate backward adjustment. No cached current-page/session total is stored. New logs start from current progress and advance by end−start. Session corrections/removals apply their page delta to progress and quotas, never silently rewrite later ranges. Corrections that would place progress outside 0..total fail with an instruction to adjust current page first. Nonvoid retained ranges must fit total pages; removed ranges do not prevent a safe total-page correction. Session removal preserves an immutable voided record. Corrections that reduce a completed book below its final page reopen it and clear its completed date. Every ledger change advances the book revision, protecting stale manual edits.
+
+### Metrics, goals and projection
+
+Session dates are explicit local calendar dates, with the same Monday-through-Sunday arithmetic as Week. Metrics exclude removed, foreign-book and future-dated rows. Today uses exact date; this week sums dated ranges through today within that local week. Goal remainder floors at zero; goal percentage may exceed 100% to show overachievement. Missing goals display No weekly target. Manual page changes never count as logged pages toward quotas.
+
+Pace uses sessions in the latest 28 calendar days through today, divided by inclusive calendar days from the first eligible date in that window to today. Nonreading days count; multiple sessions on a date count once toward the distinct-date requirement. A projection requires at least three positive reading dates across at least seven calendar days. Remaining pages divided by pace is rounded up to calendar days and added to today; paused/completed/archived books, insufficient history, no remaining pages or estimates over 100 years have no forecast. This is a labeled estimate, not a deadline. Completed books/year counts retained currently-completed books with completed dates in the current local year through today, including archived books; reopened books no longer count as completed.
+
+### Reading/task time rule for M6
+
+Reading minutes are optional and independently recorded. Sessions have `time_source = reading | task_timer`. The UI asks users to mark **Already tracked with a task timer** when minutes overlap. Reading-exclusive minutes can be added to task ledger time; task_timer minutes are retained for context and excluded from additive reading-time totals. No task session is duplicated, modified or created by Reading. M6 must apply its date-period filtering, then use the separate readingMinutes/overlappingMinutes outputs; never sum raw minutes across both systems. Dates and optional durations cannot automatically detect an unmarked overlap, so this V1 rule relies on the user's declaration. Precise timestamp/task-session linkage remains deferred.
+
+### Verification, hosted status and checkpoint
+
+Local PostgreSQL tests verify lifecycle, page/status constraints, generated page deltas, progress/manual adjustments, corrections/removal, history retention, anonymous denial, two-owner RLS including the progress view, spoofed relationships, idempotent requests and stale revisions. Browser tests import actual production components into an isolated synthetic app and use explicit local test storage; they validate UI/refresh behavior, not hosted persistence. Desktop/320px screenshots were reviewed; compact book/log sections keep active progress prominent, and button/progress contrast was adjusted. No page errors or document overflow occurred in the accepted runs.
+
+Only public Supabase configuration is available; no authenticated management connection was found. Nothing was applied or verified on the hosted project during M5. Pending order: `202610030001_optional_manual_estimate.sql` → `202610030002_task_classification.sql` → `202610030003_task_topics.sql` → `202610030004_reading.sql`. Do not rerun M2/M3 migrations. All hosted M4/M4.5/M4.6/M5 acceptance remains a release gate and does not block M6 development.
+
+Task 11 and its reading tests below are reconciled to locally/browser-verified work. M6 Analytics, unified History, final hardening/security/deployment and outstanding V1 task requirements remain unchecked. No external book API, ISBN/Goodreads, notes/highlights, recommendations, social features, calendars, notifications or Analytics UI was added. Ready for **M6 Analytics development** using existing task/timer/classification/topic/prediction/reading data, with hosted release acceptance still pending.
+
+---
+
 ## Milestone 4.6 — Topics/Tags — implemented; hosted acceptance pending 2026-10-03
 
 ### Implemented and locally verified
@@ -956,19 +1000,19 @@ type DurationPrediction = {
 
 Required:
 
-- [ ] Add book.
-- [ ] Edit book.
-- [ ] Mark book completed.
-- [ ] Update current page.
-- [ ] Set weekly page target.
-- [ ] Add reading session.
-- [ ] Store pages read.
-- [ ] Store minutes read.
-- [ ] Display current progress.
-- [ ] Display weekly quota progress.
-- [ ] Calculate average pages/day.
-- [ ] Estimate completion date.
-- [ ] Show completed-book history.
+- [x] Add book.
+- [x] Edit book.
+- [x] Mark book completed.
+- [x] Update current page.
+- [x] Set weekly page target.
+- [x] Add reading session.
+- [x] Store pages read.
+- [x] Store minutes read.
+- [x] Display current progress.
+- [x] Display weekly quota progress.
+- [x] Calculate average pages/day.
+- [x] Estimate completion date.
+- [x] Show completed-book history.
 
 ### Acceptance Criteria
 
@@ -979,7 +1023,7 @@ Required:
 
 ### Implementation Notes
 
-_Add notes here when complete._
+2026-10-03: Implemented and locally/browser verified by M5 above. These flags refer to local PostgreSQL and synthetic real-component UI acceptance; hosted persistence/sign-in acceptance remains pending in the M5 ledger. Completed/archived books and correctable session history are available within Reading; the unified History page remains M6/M7 scope.
 
 ---
 
@@ -1133,7 +1177,7 @@ Required tests:
 - [x] Duration estimator.
 - [x] Time-session aggregation.
 - [x] Daily workload calculation.
-- [ ] Reading quota calculation.
+- [x] Reading quota calculation.
 - [ ] Analytics date grouping.
 - [x] Task sorting.
 - [x] Priority ordering.
@@ -1144,7 +1188,7 @@ Where practical, add integration tests for:
 - [ ] Authentication-protected routes.
 - [ ] Task creation.
 - [x] Timer lifecycle.
-- [ ] Reading-session creation.
+- [x] Reading-session creation (local PostgreSQL + browser fixture; hosted pending).
 
 ### Acceptance Criteria
 
@@ -1153,6 +1197,8 @@ Where practical, add integration tests for:
 - Tests do not depend on random production data.
 
 ### Implementation Notes
+
+- 2026-10-03 M5: 15 Reading tests added; 80 total pass, including quota/session lifecycle, ownership, progress, projection and time overlap.
 
 - 2026-10-03 M4.6 audit: estimator and aggregation are verified by retained M3/M4/M4.5 tests; timer lifecycle passes embedded PostgreSQL with all five migrations. These flags describe local automated coverage, not new hosted acceptance.
 

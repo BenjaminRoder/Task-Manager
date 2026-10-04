@@ -5,12 +5,14 @@ import type { CategoryRepository } from "../categories/category-repository";
 import type { CourseRepository } from "../classification/course-repository";
 import type { TaskTypeRepository } from "../classification/task-type-repository";
 import type { TopicRepository } from "../classification/topic-repository";
+import type { ReadingRepository } from "../reading/reading-repository";
 export const RepositoryContext = createContext<{
   tasks: TaskRepository;
   categories: CategoryRepository;
   courses: CourseRepository;
   taskTypes: TaskTypeRepository;
   topics: TopicRepository;
+  reading: ReadingRepository;
 } | null>(null);
 export function useRepositories() {
   const repositories = useContext(RepositoryContext);
