@@ -1,5 +1,57 @@
 # Personal Task Manager — Build Instructions and Living Implementation Plan
 
+## Week calendar setup checkpoint — scaffold verified, features pending — 2026-10-04
+
+### Scope and Git evidence
+
+- [x] Survey and compile-safe setup only, verified below. This supersedes the older Stage 0 pending status; no Phase 1 or Phase 2 feature is complete.
+- Actual repository/package root: `C:/Users/jacku/OneDrive/Desktop/Projects/Task-Manager/Task-Manager` (the outer directory is not a Git repository).
+- Created and switched to `experiment/week-calendar` from local `main`, base HEAD `836802429404421eeaa2fea3d46c9f888b2bcfae`. The experiment branch did not previously exist. Local main was not updated.
+- Initial index was empty. Existing unstaged edits to `AGENTS.md`, `BUILD_PLAN.md`, `PROJECT_OVERVIEW.md`, and `README.md`, plus untracked `.Rhistory`, were preserved. The setup commit includes only this new checkpoint and the ten scaffold files; earlier user documentation edits remain unstaged. No reset, clean, overwrite of user edits, or stash.
+- Read the four available context documents and relevant Week, hosted M4–M5, classification, estimation, timer and Reading checkpoints. `WEEK_CALENDAR_PROMPTS.md`, referenced by the context, is absent from the workspace. The user's attached setup instructions and existing overview/checkpoint provide this stage's scope; the missing sequential prompt file remains a handoff gap, not permission to begin either feature phase.
+
+### Verified implementation map
+
+| Concern | Actual paths and behavior |
+| --- | --- |
+| Week route/rendering | `app/week/page.tsx` mounts `components/tasks/week-board.tsx`, which mounts `components/tasks/week-calendar.tsx`. Restructure this destination in future; do not add another Week route. Styling is in `app/globals.css`. |
+| Loading/providers | `app/layout.tsx` wraps content in `components/auth/auth-gate.tsx`. Its account-keyed workspace installs `lib/supabase/repository-context.tsx` and `lib/timers/timer-provider.tsx`. `lib/tasks/use-tasks.ts` loads retained tasks plus categories/courses/task types/topics through `lib/supabase/repositories.ts`, derives predictions from timer history, filters deleted tasks for display, and reloads after mutations/focus. |
+| Weekend actual time | `components/tasks/week-calendar.tsx` maps all seven `days` identically; Saturday/Sunday have no separate components. Every task button includes `ActualTime` from `components/timers/task-timer.tsx`. Actuals use `lib/timers/timer-provider.tsx`, `lib/timers/timer-rules.ts`, and `lib/supabase/time-session-repository.ts`; preserve these and `components/timers/time-history.tsx`. |
+| Due-date editor | `components/tasks/task-form.tsx`: submit reads `dueDate`; the optional input has `name="dueDate"`, `type="date"`. There is no due-time field. Week edits through this shared form and exposes lifecycle/timer actions through `components/tasks/task-row.tsx`. Today/Tasks share it through `components/tasks/task-board.tsx`. |
+| Sorting/duration | `lib/tasks/week-rules.ts` builds Monday–Sunday by due date and calls Momentum sorting. `lib/tasks/task-rules.ts` puts incomplete tasks first, then mode order, creation timestamp and ID. `lib/estimation/duration-estimation.ts` chooses valid manual estimate, valid prediction, then 25 minutes; completed tasks contribute no remaining workload. Calendar arithmetic uses date stepping, not elapsed 24-hour intervals. |
+| Classification | `types/course.ts`, `types/task-type.ts`, `types/task.ts`; `lib/classification/classification-rules.ts`, `course-repository.ts`, `task-type-repository.ts`; `components/classification/classification-manager.tsx`; shared form and Supabase mappings. Stable IDs, nullable assignments and retained archives are already supported. Topics are separate in `types/topic.ts`, `lib/classification/topic-rules.ts`, `topic-repository.ts` and `components/classification/topic-manager.tsx`. |
+| Preferences | No persisted UI sorting preference/helper exists in `app`, `components` or `lib`; TaskBoard uses component state. `lib/storage/local-store.ts` uses recovery keys `personal-task-manager.tasks.v1` and `personal-task-manager.data.v2`, with guarded storage access. `lib/storage/local-import.ts` scopes import markers by project/account/dataset. These are recovery conventions, not a calendar-preference implementation; future account-scoped preference hydration/fallback must be added deliberately. |
+| Domain/validation/recovery | `types/task.ts`, `lib/tasks/task-rules.ts`; `lib/storage/local-store.ts` validates v2 and migrates v1 while preserving originals, rejecting unsupported classification/topic-bearing recovery snapshots. `lib/storage/local-import.ts` canonicalizes/fingerprints fields and invokes `import_local_data`. `components/auth/auth-gate.tsx` offers explicit import consent. |
+| All task save paths | `components/tasks/task-board.tsx` create/update and `components/tasks/week-board.tsx` update call `useTasks().mutate`. `lib/supabase/repositories.ts` uses `taskFields`/`taskFromRow`, direct insert for creation without selected topics, direct update when topic IDs are omitted, and `saveWithTopics`/`save_task_with_topics` for topic-aware writes. Status/reopen and soft removal use direct partial updates. `lib/tasks/task-repository.ts` retains local create/update/status/remove for recovery/tests. Import writes through `lib/storage/local-import.ts` and the explicit task field list in `supabase/migrations/202609290001_milestone2.sql`; atomic topic saves have explicit insert/update field lists in `202610030003_task_topics.sql`. All must be considered when adding due time. |
+
+### Scaffold inventory and boundaries
+
+- [x] Domain types: `types/calendar-event.ts`, `types/recurring-class-pattern.ts`, `types/calendar-occurrence.ts`.
+- [x] Repository interfaces: `lib/calendar/event-repository.ts`, `lib/calendar/recurring-class-repository.ts`. Account ownership belongs to future authenticated adapters and database constraints, never caller-supplied input. Archive/restore is represented by `setArchived`; lists include archives, and no delete method exists.
+- [x] Dedicated type-only module shells: `lib/calendar/event-rules.ts`, `lib/calendar/weekly-recurrence.ts`. They export function signatures as types only, with no callable implementation or fabricated results.
+- [x] Unmounted, null-returning component shells: `components/calendar/calendar-grid.tsx`, `components/calendar/event-block.tsx`, `components/calendar/calendar-sidebar.tsx`.
+
+Dates/times are floating local YYYY-MM-DD/HH:mm strings, not UTC instants. Weekly patterns use the existing JavaScript weekday convention (Sunday 0 through Saturday 6); the tuple requires a nonempty weekday set, with uniqueness and valid same-day times left for future validation. Optional date bounds are inclusive. Patterns and events are retained persisted-record contracts; occurrences are read-only derived data with event identity or pattern+date identity, with no occurrence repository, exceptions, or overrides. No adapters, providers, fetches, routes, navigation, styles, migrations, or existing runtime behavior changed.
+
+### Migration/test survey and verification
+
+Existing migration order is `supabase/migrations/202609290001_milestone2.sql`, `202609300001_time_sessions.sql`, `202610030001_optional_manual_estimate.sql`, `202610030002_task_classification.sql`, `202610030003_task_topics.sql`, `202610030004_reading.sql`, then **`202610040001_analytics.sql`**. Future calendar migrations must follow the actual latest migration. No migration was authored or applied by setup.
+
+Relevant tests: `tests/categories-week.test.ts`, `tasks.test.ts`, `estimation.test.ts`, `classification-estimation.test.ts`, `classification-repository.test.ts`, `topics.test.ts`, `supabase.test.ts`, `timers.test.ts`, `timer-repository.test.ts`; embedded PostgreSQL coverage in `tests/database.test.ts`, `classification-database.test.ts`, `topics-database.test.ts`, `estimation-database.test.ts`, `reading-database.test.ts`, `analytics-database.test.ts`. `supabase/tests/timer_acceptance.sql` is the existing rollback-only hosted script, not run here. Browser scripts are `tests/browser/verify-classification-ui.mjs` (includes Week), `verify-reading-ui.mjs`, and `verify-analytics-ui.mjs`, with their corresponding explicit fixture components. No signed-in/browser/hosted QA was needed for unmounted scaffold-only changes.
+
+- [x] Before scaffold edits: `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (98/98 tests).
+- [x] After scaffold edits: the same four commands passed (98/98 tests; zero failures/skips). No baseline or introduced check failures. Existing tests were retained; no behavior-mirroring scaffold tests added.
+- Shell sandbox initialization failed with `helper_unknown_error: setup refresh had errors`; approved escalated local shell execution provided a working fallback. This did not require hosted access.
+- Concrete context discrepancy: Analytics already exists in `app/analytics/page.tsx`, `components/analytics/analytics-board.tsx`, `lib/analytics/`, `lib/supabase/analytics-repository.ts`, `types/analytics.ts`, and the latest migration/tests. Older statements that M6 has not started (and README claims that Reading/predictions are deferred) are historical/stale, not the current source state. This survey does not establish hosted Analytics migration/acceptance. No Analytics work was performed; user-edited context files and historical acceptance evidence were preserved.
+
+### Remaining scope
+
+Phase 1 remains entirely pending: nullable due time with migration/RPC/mapping/validation/recovery coverage, compact accessible task rows, shortest-first/course/type organization with account-scoped preference, and removal of weekend inline actual time only. Effective duration remains primary in shortest-first mode; due time breaks ties. Course/type groups order timed deadlines before untimed work, with stable ties and existing completed placement. Existing date-only tasks remain untimed; clearing date must clear time. Automatic organization must not rewrite manual priority/order.
+
+Phase 2 remains entirely pending: owned event/class schema and adapters with retention/restore and compound ownership/RLS tests, pure weekly expansion, clipped interval-union availability, accessible overlapping calendar blocks and create/edit/archive/restore controls, and courses/quick-task/availability sidebar in the existing Week view. Default planning window is 08:00–22:00; task estimates stay separate from recorded calendar availability. Preserve timers, estimation and Reading. Feature validation and hosted acceptance remain pending; no Phase 1/2 commit, push, merge, deployment, or hosted migration is authorized by setup.
+
+---
+
 ## 1. Purpose of This Document
 
 This document is the implementation guide for the Personal Task Manager.
