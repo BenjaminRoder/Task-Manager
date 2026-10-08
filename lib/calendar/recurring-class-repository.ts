@@ -1,6 +1,6 @@
 import type { RecurringClassPattern, RecurringClassPatternInput } from "../../types/recurring-class-pattern.ts";
 
-// Persists patterns only, with Auth-derived ownership and database-owned links.
+// Persists patterns only, with Auth-derived ownership and owner-matching links.
 // list includes archives for restore; setArchived never physically deletes rows.
 export interface RecurringClassRepository {
   list(): Promise<RecurringClassPattern[]>;

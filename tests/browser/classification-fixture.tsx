@@ -16,6 +16,7 @@ import type { TimeSession } from "@/types/time-session";
 import type { TimeSessionRepository } from "@/lib/timers/time-session-repository";
 
 import type { Topic } from "@/types/topic";
+import { calendarFixtureRepositories } from "@/tests/browser/calendar-fixture-repositories";
 
 interface FixtureData {
   topics: Topic[]; tasks: Task[]; categories: Category[]; courses: Course[]; taskTypes: TaskType[]; sessions: TimeSession[];
@@ -50,7 +51,7 @@ function changeTask(id: string, update: (task: Task) => void) {
 
 export default function ClassificationFixture() {
   const [week, setWeek] = useState(false);
-  const repositories = useMemo(() => ({ analytics: { listEstimates: async () => [] },
+  const repositories = useMemo(() => ({ ...calendarFixtureRepositories(), analytics: { listEstimates: async () => [] },
     tasks: {
       async list(includeDeleted = false) { return read().tasks.filter((task) => includeDeleted || !task.deletedAt); },
       async create(input: Parameters<typeof validateTask>[0]) {
@@ -103,7 +104,7 @@ export default function ClassificationFixture() {
     async update(session, correction) { const data = read(); const row = data.sessions.find((item) => item.id === session.id)!; Object.assign(row, correction); row.durationSeconds = (Date.parse(correction.endedAt) - Date.parse(correction.startedAt)) / 1000; write(data); },
     async remove(session) { const data = read(); data.sessions.find((item) => item.id === session.id)!.voidedAt = new Date().toISOString(); write(data); },
   }), []);
-  return <RepositoryContext.Provider value={repositories}><TimerProvider repository={timers}>
+  return <RepositoryContext.Provider value={{ ...repositories, userId: "classification-fixture" }}><TimerProvider repository={timers}>
     <p>Local classification UI fixture — synthetic history, no hosted verification.</p>
     <button onClick={() => setWeek(!week)}>{week ? "Show Today fixture" : "Show Week fixture"}</button>
     {week ? <WeekBoard /> : <TaskBoard view="today" />}

@@ -1,6 +1,6 @@
 import type { CalendarEvent, CalendarEventInput } from "../../types/calendar-event.ts";
 
-// Future adapters must pin ownership to Auth and enforce owned links in the DB.
+// Adapters pin ownership to Auth; the database also enforces owned links.
 // list includes archives for restore; setArchived never physically deletes rows.
 export interface EventRepository {
   list(): Promise<CalendarEvent[]>;

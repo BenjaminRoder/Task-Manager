@@ -1,5 +1,5 @@
-// Scaffold only. Dates are YYYY-MM-DD and times are floating local HH:mm.
-// Future validation must require a same-day interval with end strictly after start.
+// Dates are YYYY-MM-DD and times are floating local HH:mm.
+// App/database validation require a same-day interval with end strictly after start.
 export interface CalendarEventInput {
   title: string;
   date: string;

@@ -15,8 +15,12 @@ import { formatDate, formatDuration } from "@/lib/tasks/task-rules";
 import { TaskForm } from "./task-form";
 import { TaskRow } from "./task-row";
 import { WeekCalendar } from "./week-calendar";
+import { useWeekOrganization } from "@/lib/tasks/use-week-organization";
+import { weekOrganization } from "@/lib/tasks/week-organization";
+import { CalendarWorkspace } from "@/components/calendar/calendar-workspace";
 
 export function WeekBoard() {
+  const { mode, setMode } = useWeekOrganization();
   const { tasks, predictions, estimationReady, categories, courses, taskTypes, topics, ready, busy, error, today, refresh, mutate } =
     useTasks();
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
@@ -191,7 +195,16 @@ export function WeekBoard() {
           <div className="notice" role="status">
             {busy ? "Saving…" : notice}
           </div>
-          <WeekCalendar
+          <label className="week-organization">
+            Organize tasks
+            <select aria-label="Organize tasks" value={mode} onChange={(event) => setMode(weekOrganization(event.target.value))}>
+              <option value="shortest">Shortest-first</option>
+              <option value="course">Group by course</option>
+              <option value="task-type">Group by task type</option>
+            </select>
+          </label>
+          <div className="week-task-strip"><WeekCalendar
+            organization={mode}
             days={days}
             predictions={predictions}
             estimationReady={estimationReady}
@@ -207,12 +220,14 @@ export function WeekBoard() {
                 editor.current?.querySelector("input")?.focus();
               });
             }}
-          />
+          /></div>
           <p className="list-footnote">
             Organized by due date, Monday through Sunday. Totals include
             incomplete tasks only; completed tasks stay visible. Tasks without a
             due date are in <Link href="/tasks">Tasks</Link>.
           </p>
+          <CalendarWorkspace weekStart={weekStart} today={today} tasks={tasks} categories={categories} courses={courses} taskTypes={taskTypes} topics={topics}
+            taskBusy={busy} onCreateTask={input => mutate(repository => repository.create(input))} />
         </>
       ) : null}
     </>

@@ -45,6 +45,8 @@ export async function detectLocalImport(
         categoryId: t.categoryId,
         priority: t.priority,
         dueDate: t.dueDate,
+        // Keep fingerprints of previously imported date-only snapshots stable.
+        ...(t.dueTime == null ? {} : { dueTime: t.dueTime }),
         scheduledDate: t.scheduledDate,
         estimatedMinutes: t.estimatedMinutes,
         status: t.status,

@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Task } from "@/types/task";
 import type { Category } from "@/types/category";
 import { CategoryBadge } from "@/components/categories/category-badge";
-import { formatDate } from "@/lib/tasks/task-rules";
+import { formatDate, formatDueTime } from "@/lib/tasks/task-rules";
 import { EstimateDetails } from "./estimate-details";
 import type { DurationPrediction } from "@/lib/estimation/duration-estimation";
 import type { Course } from "@/types/course";
@@ -72,6 +72,7 @@ export function TaskRow({
               <span className={overdue ? "overdue" : undefined}>
                 {overdue ? "Overdue · " : "Due "}
                 {formatDate(task.dueDate)}
+                {task.dueTime ? ` at ${formatDueTime(task.dueTime)}` : ""}
               </span>
             ) : null}
             {task.scheduledDate > today ? (

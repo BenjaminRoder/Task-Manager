@@ -245,7 +245,7 @@ function AccountWorkspace({
     }
   }
   return (
-    <RepositoryContext.Provider value={repositories}>
+    <RepositoryContext.Provider value={{ ...repositories, userId }}>
       {candidate && (
         <section
           className="import-panel"

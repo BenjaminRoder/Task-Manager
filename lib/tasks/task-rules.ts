@@ -22,7 +22,24 @@ export function isDate(value: unknown): value is string {
   );
 }
 
+export function isTime(value: unknown): value is string {
+  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+export function compareDueTimes(a: Task, b: Task): number {
+  return (a.dueTime ?? "99:99").localeCompare(b.dueTime ?? "99:99");
+}
+
+export function formatDueTime(value: string): string {
+  const [hour, minute] = value.split(":").map(Number);
+  return `${hour % 12 || 12}${minute ? `:${String(minute).padStart(2, "0")}` : ""}${hour < 12 ? "am" : "pm"}`;
+}
+
 export function validateTask(input: TaskInput): TaskInput {
+  const dueTime = input.dueTime ?? null;
+  if (dueTime !== null && (!isTime(dueTime) || !input.dueDate)) {
+    throw new Error("Choose a valid due date and minute-precision due time.");
+  }
   const title = input.title.trim();
   const categoryId = validateClassificationId(input.categoryId, "category");
   const courseId = validateClassificationId(input.courseId ?? null, "course");
@@ -46,7 +63,7 @@ export function validateTask(input: TaskInput): TaskInput {
   ) {
     throw new Error("Choose a valid planned date and optional due date.");
   }
-  return { ...input, title, categoryId, courseId, taskTypeId, ...(input.topicIds === undefined ? {} : { topicIds: validateTopicIds(input.topicIds) }) };
+  return { ...input, dueTime, title, categoryId, courseId, taskTypeId, ...(input.topicIds === undefined ? {} : { topicIds: validateTopicIds(input.topicIds) }) };
 }
 
 function validateClassificationId(value: string | null, label: string): string | null {
@@ -83,7 +100,7 @@ export function sortTasks(tasks: Task[], mode: SortMode, predictions?: Predictio
     if (mode === "deadline")
       order = (a.dueDate ?? "9999-12-31").localeCompare(
         b.dueDate ?? "9999-12-31",
-      );
+      ) || compareDueTimes(a, b);
     return (
       order ||
       a.createdAt.localeCompare(b.createdAt) ||

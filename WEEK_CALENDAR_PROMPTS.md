@@ -1,0 +1,64 @@
+# Week calendar: sequential Codex execution prompts
+
+Use one prompt at a time in the actual repository. These prompts do not authorize implementation during the documentation update. Read the updated canonical context files before starting. All new calendar work remains planned until verified in code.
+
+## Prompt 1: working structure only
+
+Follow-up in the same Task Manager repository. The Week calendar brief stands. Set up the working structure only. Do not implement Phase 1 or Phase 2.
+
+1. Read AGENTS.md, PROJECT_OVERVIEW.md, the newest dated BUILD_PLAN.md checkpoints (including the active Week experiment), and README.md. Locate the actual repo/package root. Inspect git status, staged/unstaged changes, HEAD and local main. Preserve user work; do not reset, clean, stash without authorization, or overwrite changes. Do not fetch/pull/update main as part of this step.
+2. Create and switch to experiment/week-calendar from verified local main. If that branch already exists, inspect and safely resume it rather than recreating/resetting it. If existing work prevents a safe branch transition, report the concrete blocker before making a destructive change. All experiment work stays on this branch. Do not modify main, push, merge or deploy.
+3. Survey the implementation without changing runtime behavior. Record exact route, Week components, task data/provider/repository flow, weekend rendering, due-date editor, sorting/effective estimates, localStorage preference patterns, local recovery imports and all task-save paths. Inspect save_task_with_topics and current migration/test conventions. Planning examples are not proof of file paths.
+4. Scaffold only the smallest useful domain types/repository interfaces, event/recurrence lib module contracts, and calendar-grid/event-block/sidebar component shells in the existing layout. Follow existing kebab-case files and naming. Types should account for one-off events, persisted weekly class patterns, derived occurrence identity and retained removal. No production adapter wiring or new repository fetches. Function shells may explicitly throw a clear not-implemented error if called; components return null and are not mounted. Avoid fake successful data, unused imports, gratuitous abstractions, and directories that duplicate existing structure.
+5. Do not write migrations, RLS, functional event/recurrence/sorting logic or UI changes. Do not alter production routes to expose shells.
+6. Update BUILD_PLAN.md in its existing checkpoint style: date/timezone, actual branch/base HEAD, verified survey paths, scaffold names, pending Phase 1/2, decisions/limits from the overview and checks. Preserve historical evidence and unrelated notes. Update other context files only if an actual verified discrepancy requires it.
+7. Run npm run lint, npm run typecheck, npm run build and any affected tests required by AGENTS.md. Record baseline vs introduced failures. Resolve scoped failures without weakening checks. Commit only verified setup files locally, using a scoped commit that excludes unrelated staged/user changes. Do not commit if checks fail.
+
+Final response: branch/base HEAD, scaffold files, verified existing Week/editor/data-flow paths, checks/results, commit hash or blocker, remaining work, and confirmation nothing was pushed, merged, deployed or applied to hosted Supabase.
+
+## Prompt 2: Phase 1
+
+Follow-up on experiment/week-calendar. Implement only Phase 1: due times, compact Week tasks, grouping controls and weekend cleanup.
+
+First read AGENTS.md, PROJECT_OVERVIEW.md, README.md and the newest relevant BUILD_PLAN.md checkpoints; inspect current code/git state. Verify setup is complete and preserve any existing staged/unstaged work. Stay on experiment/week-calendar. No commit, push, merge, deployment or hosted migration application.
+
+Scope:
+
+1. Add a uniquely numbered migration for nullable minute-precision task due time, following the actual repository conventions. Use 202610030001_optional_manual_estimate.sql as a simple column-addition style reference, but inspect all newer migrations. Existing date-only tasks stay untimed. No RLS changes are needed solely for this column. Enforce time requires date consistently in database and app. Clearing due date clears time; clearing time preserves date.
+2. Use floating browser-local date plus HH:mm semantics from PROJECT_OVERVIEW.md. No UTC shifting, invented midnight for untimed tasks, account timezone subsystem or timezone alarms. Keep planned date separate.
+3. Add an optional time picker alongside due date and show readable due-at labels in Week. Propagate due time through Task types, validation, editor defaults/reset, repository reads/writes, imports/recovery compatibility and task-save paths. Inspect save_task_with_topics for explicit JSON field extraction/assignment; replace its definition in a new migration if necessary while preserving invoker security, ownership, atomic topic updates and unrelated fields. Never edit an already-applied migration. Verify nullable clearing survives a real local schema-backed round trip.
+4. Make Week task rows compact, retaining information/actions through accessible details where needed. Preserve completion/reopen/edit/timer/history, category/course/type/topic visibility and effective estimates. Desktop should be scannable; arbitrary workload may still scroll. Verify mobile access without document overflow.
+5. Add three organization modes with account-scoped localStorage preference: shortest-first, course, task type. Resolve the draft sorting conflict exactly as PROJECT_OVERVIEW.md specifies: shortest-first keeps effective duration primary and due time as a tie-break; course/type group by stable IDs and order timed tasks chronologically before untimed within each group/day, then effective duration/stable tie-break. Keep existing completed-task placement. Include Unassigned and readable archived references. Never rewrite manual order or priority. Use safe hydration, invalid preference fallback and unavailable-storage handling.
+6. Remove only the weekend columns' inline actual-time display. Retain weekday behavior, actual calculations, timer controls and history. No events, recurring patterns, calendar grid or sidebar implementation yet.
+
+Tests and validation:
+
+- Follow existing test patterns. Cover timed before untimed in deadline comparator, chronological/equal-time ordering, midnight/noon, shortest-first priority, grouping/Unassigned/ties, completion rules, time-without-date rejection, clear-date/clear-time behavior, legacy missing field, storage fallback/account scope and affected Week rendering. Include actual migration/save-path tests where supported.
+- Run npm run lint, npm run typecheck, npm test, npm run build and existing relevant browser verification scripts. Exercise create/edit/clear/reload, grouping reload and weekend/mobile behavior. New schema is NOT on hosted: use established local schema-backed/component QA where supported; mark hosted persistence acceptance pending rather than trying production writes, replaying migrations or bypassing repositories/RLS.
+- Update BUILD_PLAN.md with a dated Phase 1 checkpoint, exact files/migration names, authored/local-tested/hosted-unapplied status, comparator policy, test evidence and limitations. Update README operations only as needed. Do not mark blocked checks passed or discard prior acceptance notes.
+
+Final response: changed files, migration names and NOT applied to hosted status, ordering semantics, validation evidence and blockers, remaining hosted gate, and confirmation no commit/push/merge/deployment occurred.
+
+## Prompt 3: Phase 2
+
+Follow-up on experiment/week-calendar. Implement only Phase 2: one-off events, simple weekly recurring class times, and the calendar Week layout. Read the canonical context files and actual code first. Verify Phase 1 is implemented and its relevant checks pass; do not assume completion from this prompt. Preserve the uncommitted Phase 1/user changes. Stay on the experiment branch. No commit, push, merge, deployment or hosted migration application.
+
+Scope:
+
+1. Author uniquely numbered migrations for user-owned one-off events AND persisted recurring class patterns, following the actual schema and 202610030004_reading.sql security/retention conventions. Inspect actual owner/ID key types and guard/RPC patterns rather than copying a hypothetical schema.
+2. Events: title, local date, start/end time, optional task and/or course links, retained removal/archive and consistent creation/update timestamps. Classes: title, optional course, unique nonempty weekdays, start/end time, optional inclusive start/end dates, archive and timestamps. Same-day finite valid times only, end > start; bounded range start <= end when both exist. Validate both app and database.
+3. Both tables require compound (user_id, id) ownership keys, owner-matching restrictive foreign keys, appropriate indexes and identity guards; RLS owner-only SELECT/INSERT/UPDATE, no DELETE grants. Derive ownership from authenticated identity and preserve unchanged historical archived links. New/reassigned links follow existing active-record rules. Never permit a foreign-owner task/course ID. UI supports create/read/update/archive/restore for events and class series. Removal is retained, not physical deletion.
+4. Implement weekly expansion in a dedicated pure lib module: given a week range, emit concrete occurrences clipped to inclusive series dates, using calendar-date arithmetic and stable pattern+date identities. Ignore archived patterns, emit each weekday/date once, and do not persist generated instances. No RRULE, exceptions UI, occurrence overrides, alternate recurrence patterns or automatic task blocks.
+5. Restructure the existing Week route: Phase 1 compact task strip above Monday–Sunday time grid showing one-off events plus recurring instances; sidebar with courses, quick task creation and daily availability. Preserve week navigation, Phase 1 modes/due times, completed workload, timer/estimation/Reading behavior and existing destination count. Handle overlaps visibly, keyboard access, loading/empty/validation/retry states and desktop/mobile layout. No drag/resize scheduling is required.
+6. Define sidebar availability as PROJECT_OVERVIEW.md specifies: show an adjustable planning window, default 08:00–22:00; clip recorded active event/class intervals to it, union overlaps and subtract occupied minutes once. Rank days by remaining minutes with deterministic ties. Show task-estimate workload separately; unrecorded commitments and unscheduled tasks are not occupied blocks. Keep calculations pure and disclose the window in UI. Calendar blocks do not add actual focus time, training observations or Reading minutes.
+7. Extend existing repository interfaces/providers/adapters in the established pattern, keeping data access and expansion outside components. Prevent duplicate submissions and preserve original user data. Use retained QA cleanup; never hard-delete records.
+
+Tests and validation:
+
+- Embedded PostgreSQL must run the actual full migration chain including both new owned entities. Test owner and anonymous access, cross-owner links, denied DELETE, immutable identity, invalid time/date/weekday/range inputs, archive/restore and unchanged task/session/Reading retention. Follow the existing Auth fixtures and real SQL patterns.
+- Pure recurrence tests: multiple weekdays, month/year boundaries, inclusive/clipped/open-ended ranges, DST calendar boundaries, archived patterns, duplicate weekday normalization/rejection and stable unique instances across repeated calls. Availability tests: overlaps, clipped/outside blocks, empty/full days, planning window and deterministic ranking.
+- Update supported component/adapter tests and existing browser scripts for event/class editing, recurrence, week navigation, quick-task creation, overlapping blocks, archive/restore and responsive flows. Preserve Phase 1 checks. Use existing local schema-backed QA before hosted migrations exist; report any unsupported browser path as blocked/pending, never fake production-backed acceptance.
+- Run npm run lint, npm run typecheck, npm test, npm run build and relevant browser verification. Record exact outcomes; do not weaken checks or apply migrations to make hosted checks pass.
+- Update BUILD_PLAN.md with a dated Phase 2 checkpoint: files, migration names/order, authored/local-tested/NOT applied to hosted status, recurrence/availability semantics, validation, remaining limitations and separately authorized hosted application/acceptance gate. Update README operations as needed. No commit/push/merge.
+
+Final response: changed files, migration names (NOT applied to hosted), recurrence and availability behavior, local/browser validation and pending hosted acceptance, and confirmation no commit/push/merge/deployment occurred.

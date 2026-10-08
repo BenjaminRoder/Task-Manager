@@ -1,4 +1,5 @@
 "use client";
+import { unusedCalendarRepositories } from "@/tests/browser/calendar-fixture-repositories";
 // Explicit synthetic browser fixture. Production Reading always uses Supabase.
 import { useMemo } from "react";
 import { ReadingBoard } from "@/components/reading/reading-board";
@@ -23,5 +24,5 @@ export default function ReadingFixture(){
   async removeSession(session){const data=read();data.sessions.find(s=>s.id===session.id)!.voidedAt=new Date().toISOString();updateProgress(data,session.bookId);write(data);},
  }),[]);
  const repositories=useMemo(()=>({analytics:{listEstimates:async()=>[]},reading,tasks:{list:async()=>[],create:unavailable,update:unavailable,setStatus:unavailable,remove:unavailable},categories:{list:async()=>[],create:unavailable,update:unavailable,setArchived:unavailable},courses:{list:async()=>[],create:unavailable,update:unavailable,setArchived:unavailable},taskTypes:{list:async()=>[],create:unavailable,update:unavailable,setArchived:unavailable},topics:{list:async()=>[],create:unavailable,update:unavailable,setArchived:unavailable}}),[reading]);
- return <RepositoryContext.Provider value={repositories}><p>Local Reading UI fixture — no hosted verification.</p><ReadingBoard/></RepositoryContext.Provider>;
+ return <RepositoryContext.Provider value={{ ...repositories, ...unusedCalendarRepositories }}><p>Local Reading UI fixture — no hosted verification.</p><ReadingBoard/></RepositoryContext.Provider>;
 }

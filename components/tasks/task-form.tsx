@@ -40,6 +40,8 @@ export function TaskForm({
 }: TaskFormProps) {
   const id = useId();
   const titleRef = useRef<HTMLInputElement>(null);
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
+  const [dueTime, setDueTime] = useState(task?.dueTime ?? "");
   const [validation, setValidation] = useState<string | null>(null);
   const availableCategories = categories.filter(
     (category) => !category.archivedAt || category.id === task?.categoryId,
@@ -59,12 +61,13 @@ export function TaskForm({
         topicIds: data.getAll("topicIds").map(String),
         priority: String(data.get("priority")) as Priority,
         estimatedMinutes: String(data.get("estimatedMinutes") ?? "").trim() === "" ? null : Number(data.get("estimatedMinutes")),
-        dueDate: String(data.get("dueDate") ?? "") || null,
+        dueDate: dueDate || null,
+        dueTime: dueDate ? dueTime || null : null,
         scheduledDate: String(data.get("scheduledDate") ?? ""),
       });
       setValidation(null);
       if (await onSave(input)) {
-        if (!task) form.reset();
+        if (!task) { form.reset(); setDueDate(""); setDueTime(""); }
         titleRef.current?.focus();
       }
     } catch (problem) {
@@ -163,8 +166,18 @@ export function TaskForm({
               id={`${id}-due`}
               name="dueDate"
               type="date"
-              defaultValue={task?.dueDate ?? ""}
+              value={dueDate}
+              onChange={(event) => {
+                setDueDate(event.target.value);
+                if (!event.target.value) setDueTime("");
+              }}
             />
+          </label>
+          <label htmlFor={`${id}-due-time`}>
+            Due time (optional)
+            <input id={`${id}-due-time`} name="dueTime" type="time" step="60"
+              disabled={!dueDate} value={dueTime}
+              onChange={(event) => setDueTime(event.target.value)} />
           </label>
           <label htmlFor={`${id}-planned`}>
             Planned for

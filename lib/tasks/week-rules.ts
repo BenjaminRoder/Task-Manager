@@ -1,6 +1,7 @@
 import type { Task } from "../../types/task.ts";
 import type { Predictions } from "../estimation/duration-estimation.ts";
-import { isDate, remainingMinutes, sortTasks } from "./task-rules.ts";
+import { isDate, remainingMinutes } from "./task-rules.ts";
+import { sortWeekTasks } from "./week-organization.ts";
 
 // Arithmetic on calendar dates, not elapsed milliseconds, avoids DST shifts.
 export function addCalendarDays(value: string, days: number): string {
@@ -26,9 +27,9 @@ export interface WeekDay {
 export function buildWeek(tasks: Task[], weekStart: string, predictions?: Predictions): WeekDay[] {
   return Array.from({ length: 7 }, (_, index) => {
     const date = addCalendarDays(weekStart, index);
-    const dueTasks = sortTasks(
+    const dueTasks = sortWeekTasks(
       tasks.filter((task) => !task.deletedAt && task.dueDate === date),
-      "momentum",
+      "shortest",
       predictions,
     );
     return {

@@ -7,6 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
+import { verifyWeekPhaseOne } from "./week-phase-one-checks.mjs";
+import { verifyWeekPhaseTwo } from "./week-phase-two-checks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const require = createRequire(path.join(root, "package.json"));
@@ -258,6 +260,8 @@ try {
     await mkdir(process.env.CLASSIFICATION_SCREENSHOT_DIR, { recursive: true });
     await page.screenshot({ path: path.join(process.env.CLASSIFICATION_SCREENSHOT_DIR, "topics-mobile.png"), fullPage: true });
   }
+  await verifyWeekPhaseOne(page);
+  await verifyWeekPhaseTwo(page);
   assert.deepEqual(errors, []);
   console.log("PASS: local UI fixture — topics lifecycle/multiple selection/history/refresh/Week/mobile; classification management, optional capture, all six hierarchy levels plus fallback, explanations, manual override, Momentum, Today/Week, archived references, refresh, timer UI and 320px creation/editing. No hosted claims.");
 } finally {
