@@ -7,7 +7,11 @@ import type { TaskTypeRepository } from "../classification/task-type-repository"
 import type { TopicRepository } from "../classification/topic-repository";
 import type { ReadingRepository } from "../reading/reading-repository";
 import type { AnalyticsRepository } from "../analytics/analytics-repository";
+import type { EventRepository } from "../calendar/event-repository";
+import type { RecurringClassRepository } from "../calendar/recurring-class-repository";
 export const RepositoryContext = createContext<{
+  // Production is account-pinned; isolated fixtures may omit persistence scope.
+  userId?: string;
   tasks: TaskRepository;
   categories: CategoryRepository;
   courses: CourseRepository;
@@ -15,6 +19,8 @@ export const RepositoryContext = createContext<{
   topics: TopicRepository;
   reading: ReadingRepository;
   analytics: AnalyticsRepository;
+  events: EventRepository;
+  classes: RecurringClassRepository;
 } | null>(null);
 export function useRepositories() {
   const repositories = useContext(RepositoryContext);

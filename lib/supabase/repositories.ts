@@ -18,6 +18,9 @@ import type { ReadingRepository } from "../reading/reading-repository.ts";
 import { createReadingRepository } from "./reading-repository.ts";
 import { createAnalyticsRepository } from "./analytics-repository.ts";
 import type { AnalyticsRepository } from "../analytics/analytics-repository.ts";
+import { createCalendarRepositories } from "./calendar-repositories.ts";
+import type { EventRepository } from "../calendar/event-repository.ts";
+import type { RecurringClassRepository } from "../calendar/recurring-class-repository.ts";
 
 export type TaskRow = {
   task_topics?: { topic_id: string }[];
@@ -28,6 +31,7 @@ export type TaskRow = {
   task_type_id?: string | null;
   priority: Task["priority"];
   due_date: string | null;
+  due_time?: string | null;
   scheduled_date: string;
   estimated_minutes: number | null;
   status: Task["status"];
@@ -67,6 +71,7 @@ export function taskFromRow(row: TaskRow): Task {
     topicIds: (row.task_topics ?? []).map((link) => link.topic_id),
     priority: row.priority,
     dueDate: row.due_date,
+    dueTime: row.due_time?.slice(0, 5) ?? null,
     scheduledDate: row.scheduled_date,
     estimatedMinutes: row.estimated_minutes,
     status: row.status,
@@ -84,6 +89,7 @@ export function taskFields(input: TaskInput) {
     task_type_id: value.taskTypeId,
     priority: value.priority,
     due_date: value.dueDate,
+    due_time: value.dueTime ?? null,
     scheduled_date: value.scheduledDate,
     estimated_minutes: value.estimatedMinutes,
   };
@@ -120,6 +126,8 @@ export function createSupabaseRepositories(
   topics: TopicRepository;
   reading: ReadingRepository;
   analytics: AnalyticsRepository;
+  events: EventRepository;
+  classes: RecurringClassRepository;
 } {
   // Pin this repository to one account. Never let an in-flight old-account action
   // write into a newly signed-in account, even when browser auth changes tabs.
@@ -176,6 +184,7 @@ export function createSupabaseRepositories(
     databaseError(error);
   }
   return {
+    ...createCalendarRepositories(client, userId),
     reading: createReadingRepository(client, userId),
     analytics: createAnalyticsRepository(client, userId),
     topics: {

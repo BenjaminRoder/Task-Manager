@@ -13,6 +13,8 @@ export interface TaskInput {
   topicIds?: string[];
   priority: Priority;
   dueDate: string | null;
+  // Optional at legacy boundaries; current reads normalize to null.
+  dueTime?: string | null;
   scheduledDate: string;
   // Persisted manual estimate. Null means the user chooses automatic estimation.
   estimatedMinutes: number | null;

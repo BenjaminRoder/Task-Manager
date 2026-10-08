@@ -1,4 +1,5 @@
 "use client";
+import { unusedCalendarRepositories } from "@/tests/browser/calendar-fixture-repositories";
 // Local synthetic data only. This fixture is never mounted by production routes.
 import { useMemo, useState } from "react";
 import { AnalyticsBoard } from "@/components/analytics/analytics-board";
@@ -33,7 +34,7 @@ function FixtureBoard({empty,failed}:{empty:boolean;failed:boolean}){
     analytics:{listEstimates:async()=>{if(failed || localStorage.getItem("analytics-fixture-fail")==="true")throw new Error("Fixture load failure. Reload analytics to retry.");return [...data.estimates];}},
   }),[data,failed]);
   const timers=useMemo(()=>({list:async()=>[...data.sessions],serverTime:async()=>Date.now(),taskTitle:async()=>"Accounting homework",start:unavailable,stop:unavailable,update:unavailable,remove:unavailable}),[data]);
-  return <RepositoryContext.Provider value={repositories}><TimerProvider repository={timers}><AnalyticsBoard/></TimerProvider></RepositoryContext.Provider>;
+  return <RepositoryContext.Provider value={{ ...repositories, ...unusedCalendarRepositories }}><TimerProvider repository={timers}><AnalyticsBoard/></TimerProvider></RepositoryContext.Provider>;
 }
 export default function AnalyticsFixture(){
   const [mode,setMode]=useState("populated");

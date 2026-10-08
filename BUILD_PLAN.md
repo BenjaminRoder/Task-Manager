@@ -1,5 +1,145 @@
 # Personal Task Manager — Build Instructions and Living Implementation Plan
 
+## Week calendar Phase 2 — locally verified; hosted acceptance pending — 2026-10-05 (America/New_York)
+
+This checkpoint supersedes earlier statements that Phase 2 is unimplemented; historical scaffold and Phase 1 evidence below remains intact.
+
+- [x] Persisted one-off events and weekly class patterns, retained archive/restore, production repository/provider integration, Week time grid and sidebar implemented and locally verified.
+- [x] Phase 1 regression coverage retained and passed. Task deadlines remain in the task strip; they do not reserve calendar time or change estimates, timers, Reading, or Analytics.
+- [ ] Hosted migration application and production-backed acceptance remain pending and require separate authorization.
+
+### Exact Phase 2 files
+
+- Domain/contracts: `types/calendar-event.ts`, `types/recurring-class-pattern.ts`, `lib/calendar/event-repository.ts`, `lib/calendar/recurring-class-repository.ts`.
+- Validation/derivation/loading: `lib/calendar/event-rules.ts`, `lib/calendar/weekly-recurrence.ts`, `lib/calendar/calendar-rules.ts`, `lib/calendar/use-calendar.ts`.
+- Persistence/provider: `lib/supabase/calendar-repositories.ts`, `lib/supabase/repositories.ts`, `lib/supabase/repository-context.tsx`, `supabase/migrations/202610050001_calendar_events_classes.sql`.
+- UI: `components/calendar/calendar-form.tsx`, `components/calendar/calendar-workspace.tsx`, `components/calendar/calendar-grid.tsx`, `components/calendar/calendar-sidebar.tsx`, `components/calendar/event-block.tsx`, `components/tasks/week-board.tsx`, `app/globals.css`.
+- Verification: `tests/calendar.test.ts`, `tests/calendar-database.test.ts`, `tests/browser/calendar-fixture-repositories.ts`, `tests/browser/week-phase-two-checks.mjs`, `tests/browser/verify-classification-ui.mjs`, `tests/browser/classification-fixture.tsx`, `tests/browser/reading-fixture.tsx`, `tests/browser/analytics-fixture.tsx`. Reading/Analytics edits only supply required fixture repository context; no production feature changes there.
+- Documentation: `BUILD_PLAN.md`, `README.md`. Earlier Phase 1 changes and pre-existing user documentation, `.Rhistory`, and `WEEK_CALENDAR_PROMPTS.md` were preserved.
+
+### Migration order and retained ownership
+
+1. Existing `202610040001_analytics.sql` is the predecessor; reconcile its actual hosted status before later application.
+2. Phase 1 `202610040002_task_due_time.sql`: authored and locally tested, **NOT applied to hosted**.
+3. Phase 2 `202610050001_calendar_events_classes.sql`: authored and locally tested, **NOT applied to hosted**.
+
+The new migration adds `calendar_events` and `recurring_class_patterns`, compound owner/ID keys and restrictive owner-matching task/course links, indexes, immutable identity/created-time guards, finite dates/timestamps, minute-precision same-day times with end after start, and unique nonempty weekday sets. Inclusive optional series bounds must be ordered. Owner-only SELECT/INSERT/UPDATE RLS and grants exclude anonymous access and hard DELETE. Existing archived course/deleted task references can remain unchanged; new assignments require active records. Archive/restore keeps records and references. Previously applied SQL and existing task/timer/Reading data are not rewritten.
+
+### Recurrence, availability and interaction semantics
+
+Weekly expansion is pure calendar-date arithmetic: Sunday=0 through Saturday=6, clipped to the visible week and optional inclusive start/end dates. Archived patterns contribute no blocks. Occurrences have stable pattern+date identities, are deduplicated, and are never stored. Selecting an occurrence edits the entire series; no exceptions, RRULEs or per-occurrence overrides. Dates/times are floating browser-local values, not UTC instants.
+
+Recorded availability defaults to 08:00–22:00. The user can change this nonpersisted planning window. For each visible day, active event/class intervals are clipped to the window and unioned; overlap is subtracted once. Remaining minutes rank descending, with date as deterministic tie-breaker. Task workload stays separate; unrecorded commitments/sleep are not inferred. Loading failures do not fabricate empty calendars or free time.
+
+The existing Week destination keeps tasks above a full-day grid initially scrolled to 08:00. Overlap lanes preserve individually selectable blocks. Minimum visual height is one hour; labels retain actual times, and truncation preserves full accessible/title text plus the editor. All seven days fit the tested 1440px desktop; 320px uses scrolling inside the time grid with no document overflow. Sidebar courses include retained archives, and quick capture reuses TaskForm without resetting selected week or organization. Calendar data loads only with the Week workspace. Errors, retry, saved-but-reload-failed state and disabled concurrent saves are explicit.
+
+### Validation evidence and remaining gate
+
+- [x] `npm run lint`, `npm run typecheck`, `npm test` (**112/112**, no skips), `npm run build` passed after the final code changes. Seven focused Phase 2 tests extend the 105-test Phase 1 baseline.
+- [x] Full actual migration chain executed in PGlite with explicit test Auth roles. Tests cover ownership/anonymous denial, foreign links, denied DELETE, immutable identity, invalid dates/times/weekday sets/ranges, retained archive/restore and unchanged task due-time/timer/Reading values. Production calendar adapters round-trip create/read/edit/archive/restore through an authenticated local SQL transport. This is not hosted PostgREST evidence.
+- [x] Pure tests cover multiweekday recurrence, inclusive/open bounds, month/year/leap/DST boundaries, maximum date, archives, duplicate rejection, stable IDs and no mutation; availability covers overlap/clipping/outside/empty/full windows, changed windows and ranking. Lane layout covers overlap and reuse.
+- [x] `npm run test:classification-ui` passed existing regressions, full Phase 1 checks and Phase 2 event/class create/edit/navigation/whole-series changes/archive/restore/reload, quick task, overlap lanes, availability, failure/retry and desktop/mobile checks. Explicit local synthetic component storage is separate from SQL persistence evidence; calendar QA records are archived through UI.
+- [x] `npm run test:reading-ui` and `npm run test:analytics-ui` passed their existing desktop/320px suites.
+- Desktop/mobile screenshots visually reviewed: `C:/Users/jacku/.codex/visualizations/2026/10/05/01a109f4-2ed5-74c3-ac28-bf84ac7c9352/week-phase-two-1440.png` and `week-phase-two-320.png`. These component fixtures omit production Google fonts. No local validation blocker remains.
+- Limitations: last-write-wins edits, no realtime/offline write queue, weekly-only recurrence and no timezone conversion; planning window is session UI state. Hosted browser persistence, API schema behavior and real-account isolation have not been verified for either pending migration.
+- Separately authorized next step: reconcile the hosted chain without replaying applied migrations; apply pending Phase 1 then Phase 2 in order, refresh the API schema as necessary, and verify signed-in due-time/topic saves plus event/class create/read/edit/archive/restore/reload and owner isolation using the designated dev account. Retain any QA history through archive/soft-delete/void. Do not use the personal account or attempt incompatible writes before migration. No hosted QA records or credentials were used here.
+- Source state remains `experiment/week-calendar`, HEAD `675173ae9b6a8bf07244613d7a47bd949c00bd1c`; main remains `836802429404421eeaa2fea3d46c9f888b2bcfae`. No staging, commit, push, merge, deployment or hosted migration application occurred.
+
+---
+
+## Week calendar Phase 1 — locally verified; hosted acceptance pending — 2026-10-04 (America/New_York)
+
+### Implemented scope and source state
+
+- [x] Optional minute-precision task due times, compact Week task cards, organization controls, account-scoped preference and weekend inline-actual cleanup. Phase 2 remains unimplemented and its shells remain unmounted.
+- Continued on `experiment/week-calendar`, HEAD `675173ae9b6a8bf07244613d7a47bd949c00bd1c`, originally based on local main `836802429404421eeaa2fea3d46c9f888b2bcfae`. No commit, staging, push, merge, deployment or hosted operation in this phase. Existing user edits and `.Rhistory` were preserved.
+- `WEEK_CALENDAR_PROMPTS.md` is now present and was read. Its untracked addition is intentional user work and was preserved; this supersedes only the scaffold's missing-file note. The supplied Phase 1 request takes precedence over its staged prompts. Historical setup and acceptance evidence below is retained.
+- Verified existing destination remains `app/week/page.tsx` → `components/tasks/week-board.tsx` → `components/tasks/week-calendar.tsx`; shared editor remains `components/tasks/task-form.tsx` and production persistence remains `lib/supabase/repositories.ts`.
+
+### Changes and ordering
+
+`types/task.ts`, `lib/tasks/task-rules.ts`, `components/tasks/task-form.tsx`, `components/tasks/task-row.tsx`, `lib/supabase/repositories.ts` and `lib/storage/local-import.ts` propagate due time through validation, controlled form defaults/reset/clearing, labels, row mappings, direct saves, topic saves and recovery fingerprints. Missing legacy values normalize to null at validation/cloud-read boundaries. Recovery uses existing `lib/storage/local-store.ts` validation and `lib/tasks/task-repository.ts` writes; no version bump or destructive rewrite. Date-only import fingerprints remain unchanged; non-null due times participate in fingerprints. Clearing the date clears the form time; clearing only time preserves date. Database partial date clears also clear time.
+
+`lib/tasks/week-organization.ts` owns pure sorting/grouping; `lib/tasks/week-rules.ts` uses it for default Week ordering. Within each day:
+
+- Shortest-first: effective duration (manual → prediction → 25-minute fallback), then timed before untimed/earlier due time, then creation timestamp and ID.
+- Course/task-type: group by stable IDs, with Unassigned and retained archived labels; within each group, timed deadlines chronologically before untimed, then effective duration, creation timestamp and ID. Groups sort by label and stable identity. Incomplete groups precede all completed groups, which have explicit Completed headings; shortest-first also keeps completed tasks last.
+- Existing due-date placement, Monday–Sunday navigation, deleted/undated exclusion and remaining-workload rules remain unchanged. Today/Tasks Deadline sorting now uses time to break equal-date ties, and task-row due labels include time. Today inclusion/overdue-day semantics remain date-based; no alarm/timezone subsystem was added. Automatic ordering does not persist task order or change priority.
+
+`lib/tasks/week-preference.ts` and `lib/tasks/use-week-organization.ts` persist only the mode under `personal-task-manager.week-organization.v1:<userId>`. `lib/supabase/repository-context.tsx` and `components/auth/auth-gate.tsx` expose the authenticated account scope. `useSyncExternalStore` provides a stable shortest-first server snapshot, client hydration and storage-event subscription; invalid/missing values use shortest-first. Blocked reads/writes retain a usable in-memory selection without touching recovery keys. There was no existing persisted UI-sort helper to reuse.
+
+`components/tasks/week-board.tsx`, `components/tasks/week-calendar.tsx` and `app/globals.css` add the selector/group headings, tighten card spacing and classification typography, and display readable due-at labels. All prior classification/estimate/priority information remains visible; clicking a card still opens the shared editor and existing completion/reopen/timer/history actions. Only the Saturday/Sunday card `ActualTime` is omitted; weekday inline actuals and all underlying timer/history data remain unchanged. Cards have no workload-height cap; the existing responsive mobile day stack remains.
+
+### Migration and local schema evidence
+
+- [x] **Authored and locally tested, NOT applied to hosted:** `supabase/migrations/202610040002_task_due_time.sql`, ordered immediately after the actual latest `202610040001_analytics.sql`. Previously applied migrations were not edited.
+- Adds nullable `tasks.due_time` as `time without time zone`, no default/backfill; existing date-only tasks remain untimed. CHECK requires a date, zero seconds/fractions and time below 24:00. A BEFORE UPDATE trigger clears time when an existing date is removed.
+- Replaces `save_task_with_topics` and `import_local_data` through the new migration, retaining invoker security, ownership checks, grants, atomicity, original field assignments and topic/archive semantics. Legacy RPC updates omitting the new JSON key retain existing time; explicit null clears it. Import reads optional `dueTime`. No RLS policy changes, tables, event adapters or Phase 2 logic.
+- `tests/due-time-database.test.ts` applies the full actual migration chain to PGlite with explicit test Auth roles. Production Supabase adapter calls use a local SQL-backed transport fixture under authenticated RLS: direct insert/update and topic RPC create/update/read/clear round trips preserve time. Tests cover legacy rows/RPC omissions, midnight, invalid seconds/fractions/24:00/time-without-date, partial date clears, topic rollback, import/retry, foreign-owner isolation and anonymous/DELETE denial. This is embedded PostgreSQL evidence, not a hosted PostgREST acceptance claim.
+
+### Verification and limitations
+
+- [x] `npm run lint`, `npm run typecheck`, `npm test` (105/105 passed, no skips), `npm run build`. The original 98 tests were retained and passed; seven focused tests were added. No pre-existing check failure was found. Initial new fixture errors (Auth substitution, SQL date transport formatting and import fingerprint shape) were corrected without weakening constraints/checks.
+- [x] `tests/week-due-time.test.ts`: duration/time precedence, deterministic ties, ID grouping/Unassigned/archives/completed placement, default Week builder, validation/legacy reads, readable midnight/noon, local recovery/fingerprint stability, preference persistence/account separation/invalid values/storage failures.
+- [x] `npm run test:classification-ui`: existing classifications/topics/estimation/Today/Week/timer regressions plus `tests/browser/week-phase-one-checks.mjs`. Uses actual components in the existing explicit local fixture (`tests/browser/classification-fixture.tsx`), never a hosted account. Verified create/edit/clear/reload/reset, grouped/shortest ordering, archived labels, preference reload/invalid/unavailable storage, navigation, completed-last/reopen, weekend timer/history access, weekday-only inline actuals, and 1440px/320px layouts with no document overflow or page exceptions.
+- Desktop/mobile screenshots were visually reviewed at `C:/Users/jacku/.codex/visualizations/2026/10/05/01a109f4-2ed5-74c3-ac28-bf84ac7c9352/week-phase-one-1440.png` and `week-phase-one-320.png`. These are isolated component-fixture layouts; the fixture does not load production Google fonts. Browser storage fixtures and SQL-backed persistence tests are separate evidence.
+- [ ] Hosted application/acceptance remains pending. Before using this branch for production writes, a separately authorized step must reconcile the hosted migration chain (including Analytics status), apply the new migration in order, refresh the API schema as necessary, and verify signed-in direct/topic save/read/clear/reload and ownership behavior with the dev account. Do not replay previously applied migrations. Old hosted topic RPC definitions can ignore unknown JSON fields, so no new-field hosted saves were attempted.
+- Floating dates/times are browser-local wall-clock deadlines, not UTC instants; cross-timezone interpretation and date-based overdue markers remain limitations. No hosted QA records or credentials were used. Phase 2 events, recurrence, calendar grid and sidebar remain pending; no production wiring of their scaffold occurred.
+
+---
+
+## Week calendar setup checkpoint — scaffold verified, features pending — 2026-10-04
+
+### Scope and Git evidence
+
+- [x] Survey and compile-safe setup only, verified below. This supersedes the older Stage 0 pending status; no Phase 1 or Phase 2 feature is complete.
+- Actual repository/package root: `C:/Users/jacku/OneDrive/Desktop/Projects/Task-Manager/Task-Manager` (the outer directory is not a Git repository).
+- Created and switched to `experiment/week-calendar` from local `main`, base HEAD `836802429404421eeaa2fea3d46c9f888b2bcfae`. The experiment branch did not previously exist. Local main was not updated.
+- Initial index was empty. Existing unstaged edits to `AGENTS.md`, `BUILD_PLAN.md`, `PROJECT_OVERVIEW.md`, and `README.md`, plus untracked `.Rhistory`, were preserved. The setup commit includes only this new checkpoint and the ten scaffold files; earlier user documentation edits remain unstaged. No reset, clean, overwrite of user edits, or stash.
+- Read the four available context documents and relevant Week, hosted M4–M5, classification, estimation, timer and Reading checkpoints. `WEEK_CALENDAR_PROMPTS.md`, referenced by the context, is absent from the workspace. The user's attached setup instructions and existing overview/checkpoint provide this stage's scope; the missing sequential prompt file remains a handoff gap, not permission to begin either feature phase.
+
+### Verified implementation map
+
+| Concern | Actual paths and behavior |
+| --- | --- |
+| Week route/rendering | `app/week/page.tsx` mounts `components/tasks/week-board.tsx`, which mounts `components/tasks/week-calendar.tsx`. Restructure this destination in future; do not add another Week route. Styling is in `app/globals.css`. |
+| Loading/providers | `app/layout.tsx` wraps content in `components/auth/auth-gate.tsx`. Its account-keyed workspace installs `lib/supabase/repository-context.tsx` and `lib/timers/timer-provider.tsx`. `lib/tasks/use-tasks.ts` loads retained tasks plus categories/courses/task types/topics through `lib/supabase/repositories.ts`, derives predictions from timer history, filters deleted tasks for display, and reloads after mutations/focus. |
+| Weekend actual time | `components/tasks/week-calendar.tsx` maps all seven `days` identically; Saturday/Sunday have no separate components. Every task button includes `ActualTime` from `components/timers/task-timer.tsx`. Actuals use `lib/timers/timer-provider.tsx`, `lib/timers/timer-rules.ts`, and `lib/supabase/time-session-repository.ts`; preserve these and `components/timers/time-history.tsx`. |
+| Due-date editor | `components/tasks/task-form.tsx`: submit reads `dueDate`; the optional input has `name="dueDate"`, `type="date"`. There is no due-time field. Week edits through this shared form and exposes lifecycle/timer actions through `components/tasks/task-row.tsx`. Today/Tasks share it through `components/tasks/task-board.tsx`. |
+| Sorting/duration | `lib/tasks/week-rules.ts` builds Monday–Sunday by due date and calls Momentum sorting. `lib/tasks/task-rules.ts` puts incomplete tasks first, then mode order, creation timestamp and ID. `lib/estimation/duration-estimation.ts` chooses valid manual estimate, valid prediction, then 25 minutes; completed tasks contribute no remaining workload. Calendar arithmetic uses date stepping, not elapsed 24-hour intervals. |
+| Classification | `types/course.ts`, `types/task-type.ts`, `types/task.ts`; `lib/classification/classification-rules.ts`, `course-repository.ts`, `task-type-repository.ts`; `components/classification/classification-manager.tsx`; shared form and Supabase mappings. Stable IDs, nullable assignments and retained archives are already supported. Topics are separate in `types/topic.ts`, `lib/classification/topic-rules.ts`, `topic-repository.ts` and `components/classification/topic-manager.tsx`. |
+| Preferences | No persisted UI sorting preference/helper exists in `app`, `components` or `lib`; TaskBoard uses component state. `lib/storage/local-store.ts` uses recovery keys `personal-task-manager.tasks.v1` and `personal-task-manager.data.v2`, with guarded storage access. `lib/storage/local-import.ts` scopes import markers by project/account/dataset. These are recovery conventions, not a calendar-preference implementation; future account-scoped preference hydration/fallback must be added deliberately. |
+| Domain/validation/recovery | `types/task.ts`, `lib/tasks/task-rules.ts`; `lib/storage/local-store.ts` validates v2 and migrates v1 while preserving originals, rejecting unsupported classification/topic-bearing recovery snapshots. `lib/storage/local-import.ts` canonicalizes/fingerprints fields and invokes `import_local_data`. `components/auth/auth-gate.tsx` offers explicit import consent. |
+| All task save paths | `components/tasks/task-board.tsx` create/update and `components/tasks/week-board.tsx` update call `useTasks().mutate`. `lib/supabase/repositories.ts` uses `taskFields`/`taskFromRow`, direct insert for creation without selected topics, direct update when topic IDs are omitted, and `saveWithTopics`/`save_task_with_topics` for topic-aware writes. Status/reopen and soft removal use direct partial updates. `lib/tasks/task-repository.ts` retains local create/update/status/remove for recovery/tests. Import writes through `lib/storage/local-import.ts` and the explicit task field list in `supabase/migrations/202609290001_milestone2.sql`; atomic topic saves have explicit insert/update field lists in `202610030003_task_topics.sql`. All must be considered when adding due time. |
+
+### Scaffold inventory and boundaries
+
+- [x] Domain types: `types/calendar-event.ts`, `types/recurring-class-pattern.ts`, `types/calendar-occurrence.ts`.
+- [x] Repository interfaces: `lib/calendar/event-repository.ts`, `lib/calendar/recurring-class-repository.ts`. Account ownership belongs to future authenticated adapters and database constraints, never caller-supplied input. Archive/restore is represented by `setArchived`; lists include archives, and no delete method exists.
+- [x] Dedicated type-only module shells: `lib/calendar/event-rules.ts`, `lib/calendar/weekly-recurrence.ts`. They export function signatures as types only, with no callable implementation or fabricated results.
+- [x] Unmounted, null-returning component shells: `components/calendar/calendar-grid.tsx`, `components/calendar/event-block.tsx`, `components/calendar/calendar-sidebar.tsx`.
+
+Dates/times are floating local YYYY-MM-DD/HH:mm strings, not UTC instants. Weekly patterns use the existing JavaScript weekday convention (Sunday 0 through Saturday 6); the tuple requires a nonempty weekday set, with uniqueness and valid same-day times left for future validation. Optional date bounds are inclusive. Patterns and events are retained persisted-record contracts; occurrences are read-only derived data with event identity or pattern+date identity, with no occurrence repository, exceptions, or overrides. No adapters, providers, fetches, routes, navigation, styles, migrations, or existing runtime behavior changed.
+
+### Migration/test survey and verification
+
+Existing migration order is `supabase/migrations/202609290001_milestone2.sql`, `202609300001_time_sessions.sql`, `202610030001_optional_manual_estimate.sql`, `202610030002_task_classification.sql`, `202610030003_task_topics.sql`, `202610030004_reading.sql`, then **`202610040001_analytics.sql`**. Future calendar migrations must follow the actual latest migration. No migration was authored or applied by setup.
+
+Relevant tests: `tests/categories-week.test.ts`, `tasks.test.ts`, `estimation.test.ts`, `classification-estimation.test.ts`, `classification-repository.test.ts`, `topics.test.ts`, `supabase.test.ts`, `timers.test.ts`, `timer-repository.test.ts`; embedded PostgreSQL coverage in `tests/database.test.ts`, `classification-database.test.ts`, `topics-database.test.ts`, `estimation-database.test.ts`, `reading-database.test.ts`, `analytics-database.test.ts`. `supabase/tests/timer_acceptance.sql` is the existing rollback-only hosted script, not run here. Browser scripts are `tests/browser/verify-classification-ui.mjs` (includes Week), `verify-reading-ui.mjs`, and `verify-analytics-ui.mjs`, with their corresponding explicit fixture components. No signed-in/browser/hosted QA was needed for unmounted scaffold-only changes.
+
+- [x] Before scaffold edits: `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (98/98 tests).
+- [x] After scaffold edits: the same four commands passed (98/98 tests; zero failures/skips). No baseline or introduced check failures. Existing tests were retained; no behavior-mirroring scaffold tests added.
+- Shell sandbox initialization failed with `helper_unknown_error: setup refresh had errors`; approved escalated local shell execution provided a working fallback. This did not require hosted access.
+- Concrete context discrepancy: Analytics already exists in `app/analytics/page.tsx`, `components/analytics/analytics-board.tsx`, `lib/analytics/`, `lib/supabase/analytics-repository.ts`, `types/analytics.ts`, and the latest migration/tests. Older statements that M6 has not started (and README claims that Reading/predictions are deferred) are historical/stale, not the current source state. This survey does not establish hosted Analytics migration/acceptance. No Analytics work was performed; user-edited context files and historical acceptance evidence were preserved.
+
+### Remaining scope
+
+Phase 1 remains entirely pending: nullable due time with migration/RPC/mapping/validation/recovery coverage, compact accessible task rows, shortest-first/course/type organization with account-scoped preference, and removal of weekend inline actual time only. Effective duration remains primary in shortest-first mode; due time breaks ties. Course/type groups order timed deadlines before untimed work, with stable ties and existing completed placement. Existing date-only tasks remain untimed; clearing date must clear time. Automatic organization must not rewrite manual priority/order.
+
+Phase 2 remains entirely pending: owned event/class schema and adapters with retention/restore and compound ownership/RLS tests, pure weekly expansion, clipped interval-union availability, accessible overlapping calendar blocks and create/edit/archive/restore controls, and courses/quick-task/availability sidebar in the existing Week view. Default planning window is 08:00–22:00; task estimates stay separate from recorded calendar availability. Preserve timers, estimation and Reading. Feature validation and hosted acceptance remain pending; no Phase 1/2 commit, push, merge, deployment, or hosted migration is authorized by setup.
+
+---
+
 ## 1. Purpose of This Document
 
 This document is the implementation guide for the Personal Task Manager.
@@ -12,85 +152,44 @@ The project should be built incrementally, tested frequently, committed to Git r
 
 Do not attempt to implement the entire application in one uncontrolled pass.
 
-## Clear Studio visual reskin — verified 2026-10-04
+## Week calendar planning checkpoint — 2026-10-04 (status reconciled after Phase 2)
 
-### Implementation Notes
+This checkpoint records a documentation-only planning update. The repository was not available in this session: no branch was created, no source files/migrations were changed, and no checks were run. The prior hosted database and authenticated acceptance evidence below is preserved. Older milestone notes that say hosted M4–M5 is pending are superseded only to the extent of the dated hosted evidence, not blanket acceptance of every flow.
 
-- 2026-10-04: Restyled existing selectors in app/globals.css with the exact Clear Studio light/dark palette, orange action/active states, Paper Ledger Newsreader headlines, IBM Plex Sans UI, and IBM Plex Mono timer/stat/micro-label typography. Added the requested radii, circular checkboxes, accent focus outlines, panel spacing, and elevated-surface shadow. Existing layout structure and responsive breakpoints remain intact.
-- app/layout.tsx changes are limited to next/font/google imports, font definitions, and body font-variable wiring. Newsreader uses variable weight (including 500/650) with its optical-size axis.
-- Category dots and inline user-selected colors remain untouched. Exact course/personal chip tokens and optional data-kind CSS hooks are defined; existing badges have no semantic kind attribute, so they retain a neutral pill surface rather than guessing category type. Activating distinct kind palettes would require a separately authorized component markup change.
-- PASS: npm run lint; npm run typecheck; npm test (98/98); npm run build; npm run test:analytics-ui; npm run test:classification-ui; npm run test:reading-ui. All three browser scripts verified their existing desktop/320px flows and overflow assertions with local fixtures.
-- Additional actual-app browser verification: signed-out Today at 1440px and 320px in both light and dark mode, no horizontal overflow, correct computed palette, IBM Plex Sans body and Newsreader 650 headings. Screenshots visually inspected. Existing UI fixture layouts do not wire next/font themselves; actual font wiring was verified in the real app separately.
-- No application logic, schema, migration, RLS, data-driven category color, or component markup changes beyond font wiring. No commit or push. Development preview left running at http://127.0.0.1:3000.
+Current authorized next work is the Week calendar experiment. Do not begin M6 Analytics or other milestones. Product semantics are in `PROJECT_OVERVIEW.md`, durable rules in `AGENTS.md`, operations in `README.md`, and three sequential execution prompts in `WEEK_CALENDAR_PROMPTS.md`. Copy these files into the actual repository under their canonical names, preserving any newer repository content. Repo code plus verified dated checkpoints govern actual implementation state; filenames with upload suffixes are not repository paths.
 
----
-## UI polish — completed and verified 2026-10-04
+### Stage 0 — survey and compile-safe scaffold (verified; see setup checkpoint)
 
-- [x] 2026-10-04 sign-in copy polish: replaced the developer-facing account/setup paragraph with “Sign in with your Task Manager account.” The signed-out sign-in panel contains no Supabase/README/setup guidance; the separate missing-configuration setup panel is unchanged. No form, input, button, auth behavior, schema, migration, or RLS changes. `npm run lint`, `npm run typecheck`, `npm test` (**98/98**), and `npm run build` PASS; no commit or push.
-- [x] Archive visibility buttons now read **Show archived** when OFF and **Hide archived** when ON, retaining `aria-pressed`. Categories and Reading use their existing controls; Courses/Task types/Topics inherit the label change from `NamedClassificationManager`. Filtering and archive/restore behavior are unchanged.
-- [x] Vertically center the sign-in panel using auth-only main-content flex layout, symmetric vertical padding, and the existing panel width limit. Mobile auth layout fills the space beneath navigation and remains scrollable on short screens. Form markup, inputs, and button styling are unchanged.
-- Validation: `npm run lint`, `npm run typecheck`, `npm test` (**98/98**), `npm run build`, `npm run test:classification-ui`, `npm run test:reading-ui`, and `git diff --check` PASS. Existing browser assertions verify both visible toggle labels, including Topics. A local signed-out production-browser check confirms viewport centering at 1440×1000 and no horizontal overflow at 320×900 or 320×480; no sign-in was submitted or hosted auth request allowed. No schema, migration, RLS, or unrelated behavior changes; no commit or push.
+- [x] Inspect actual repository root, current branch/HEAD, working/staged diff, and baseline checks; preserve unrelated/user changes.
+- [x] Create `experiment/week-calendar` from verified local main without updating main, or safely resume the existing experiment branch. No push/merge/deployment.
+- [x] Record verified Week route/components/data flow, weekend rendering, due-date editor, task-save RPC/adapter mappings, preference patterns, migration/test conventions, and baseline results.
+- [x] Add only minimal domain/repository contracts, unused module stubs and null-rendering component shells in existing layout; no runtime wiring, migrations, RLS or feature behavior. Unimplemented stubs must fail explicitly if called, never fabricate successful empty results.
+- [x] Lint/typecheck/build pass; run affected tests if required by repository rules. Update this checkpoint with actual file paths/evidence, then commit only authorized setup files locally. Do not sweep unrelated staged work into that commit.
 
----
+### Phase 1 — task model and compact Week (locally verified; hosted acceptance pending)
 
-## Management archive visibility — completed and verified 2026-10-04
+- [x] Nullable due-time migration preserving existing date-only records; validation rejects time without date; clear-date behavior clears time. Follow actual migration numbering, no hosted application or RLS weakening.
+- [x] Propagate the field through domain types, editor, validators, read/write adapters, task-save RPC JSON handling, recovery imports/defaults and relevant task-deadline consumers. Check existing `save_task_with_topics` for explicit field lists. Update its definition in a new migration if needed, preserving security/atomicity.
+- [x] Compact accessible Week task strip with shortest-first/course/task-type modes, deadline ordering per overview, persisted account-scoped preference, stable unassigned/archived group rendering and unchanged manual order.
+- [x] Hide weekend inline actual time only; preserve weekday behavior, timer controls/history, actual calculations and estimates.
+- [x] Test deadline validation/sorting/ties, clearing and legacy reads/writes, preference recovery/account scope and affected Week tests. Lint/typecheck/test/build and existing relevant browser checks; distinguish local tests from hosted acceptance.
+- [x] Record new migration filenames and unapplied hosted status, changed files, exact sorting policy, verification and limitations. No commit/push/merge.
 
-- [x] Add local **Show archived** controls, OFF by default, to Categories, Courses, Task types, Topics, and Reading books management lists.
-- Filtering uses existing `archivedAt` fields only during rendering. Active records remain visible; enabling the control includes archived records with existing archived labels and the app's muted color. Existing archive/restore callbacks reload records, so archiving hides a row immediately when OFF, keeps it visible when ON, and restoring makes it active in either view. Visibility resets on reload; no preference persistence was added.
-- Reused `secondary-button`, `aria-pressed`, React local state, and the existing `NamedClassificationManager` for independent Courses/Task types/Topics controls. No new component abstraction or dependency; assignment dropdowns, historical relationships, and archive semantics are unchanged. No deletion functionality, schema/migration/RLS changes, hosted database operations, commit, or push.
-- Validation: `npm run lint`, `npm run typecheck`, `npm test` (**92/92**), `npm run build`, `npm run test:classification-ui`, `npm run test:reading-ui`, and `git diff --check` PASS. Existing synthetic browser fixtures now verify archive visibility with both toggle states, restore behavior, and Reading reload defaults alongside retained dropdown/history/desktop/320px coverage. The existing test suite uses isolated embedded PostgreSQL; no application database migrations were run.
+### Phase 2 — events/classes/calendar/sidebar (locally verified; hosted acceptance pending)
 
----
+- [x] Owned one-off event and recurring-class-pattern schema, compound ownership links, checks/indexes/timestamps/identity guards, owner-only RLS, no DELETE grants; retain removal/archive and restore. Migration SQL is authored/local-tested only, never applied to hosted by this stage.
+- [x] Repository contracts/adapters and create/read/update/archive/restore UI for both record types, with same-day time validation and allowed linked-record rules.
+- [x] Dedicated pure weekly expansion: inclusive date boundaries, unique weekday instances, stable pattern+date IDs, no stored generated rows, no RRULE/occurrence exceptions. Pure availability calculation unions clipped intervals within planning window.
+- [x] Existing Week route integrates tasks above time grid plus course/availability/quick-task sidebar, overlapping events/classes, accessible controls and responsive states. Preserve Phase 1 and existing timer/Reading/estimator flows.
+- [x] Embedded PostgreSQL executes actual new migration chain and tests owner isolation, anonymous denial, foreign-owner links, invalid dates/times/weekday sets, lifecycle retention, denied DELETE and unchanged existing task/session behavior. Unit tests cover recurrence month/year/DST boundaries, range clipping, archived patterns and uniqueness; availability covers overlap/clipping/empty days.
+- [x] Lint/typecheck/test/build plus existing relevant browser checks. Never run hosted writes against unapplied schema or bypass adapters/RLS to fake acceptance. Record local vs hosted evidence and required migration application/reload gate.
+- [x] Update dated checkpoint with evidence and pending hosted acceptance. No commit/push/merge.
 
-## Milestone 6 — Analytics — locally implemented and verified 2026-10-04
+### Boundaries and handoff
 
-This request authorizes M6 after the hosted M4–M5 checkpoint below. The earlier checkpoint's “Do not begin M6” describes that historical checkpoint only; its schema and hosted evidence remain authoritative. No commit, push, hosted SQL, production data change, or deployment was performed for M6.
+The overview resolves the draft ordering ambiguity: shortest-first retains effective-duration priority; course/type modes use due-time priority within groups. Availability is a union of recorded blocks within a visible planning window, independent of task estimates. Both events and recurring patterns are persisted; generated instances are not. Full CRUD means create/read/update/retained removal with restore, never physical deletion. All stages keep the existing Week destination, weekly-only recurrence and retained QA history.
 
-### Implementation and schema choices
-
-- Added `supabase/migrations/202610040001_analytics.sql`, applied only to isolated embedded PostgreSQL after all M2–M5 migrations. It preserves existing tasks, timer sessions, books and reading sessions without rewriting/backfilling them.
-- `completion_estimates` is a narrow append-only snapshot table with compound owner/UUID identity, owner-matching restrictive task FK, unique owner/task/completion timestamp, creation timestamp, checks, period index, and owner-only SELECT RLS. Authenticated clients have no INSERT, UPDATE or DELETE grant; anonymous access is denied. No cached actual duration or duplicated task-estimate columns were introduced.
-- A non-callable SECURITY DEFINER trigger with an empty search path and explicit owner filtering captures a snapshot atomically after an incomplete → completed transition, after M3 closes any running timer. It stores nullable manual `estimated_minutes`, nullable derived prediction, effective minutes/source, prediction source and sample size. Manual → prediction → 25-minute default precedence remains intact. Snapshot generation failure rolls back completion; it cannot silently omit history.
-- Predictions use the existing six-level hierarchy, minimum three samples, newest twenty, N..1 rank weights, nearest-five rounding and five-minute floor. Soft-deleted completed history remains eligible; active/void/zero sessions and reopened tasks do not train. SQL uses bytewise ID ordering for exact completion-time ties; normal generated UUID IDs match the existing JavaScript ordering, while legacy mixed-case/punctuation IDs may order differently at an exact timestamp tie. This narrow deterministic tie limitation is explicit; no estimator behavior was changed.
-- Ordinary edits preserve a completed task's completion timestamp and its immutable snapshot. Reopening retains the old snapshot; recompletion captures a new one, matched with PostgreSQL microsecond precision. Existing/imported already-completed records intentionally have no retrospective snapshot: their historical predictions cannot be reconstructed honestly. Their count and recorded actuals still appear.
-
-### Analytics definitions and boundaries
-
-- 2026-10-04 follow-up: finalized study/non-study productive classification in `lib/analytics/analytics.ts`. For eligible task timer sessions in the selected period, `course_id != null` → study and `course_id == null` → non-study productive (`courseId` in the domain model; omitted legacy values are treated as null). Each duration enters exactly one bucket. Historical retained tasks use their current course relationship; archived courses still count as study. No course names/IDs, category names, task types, or course archive state influence the calculation. Reading remains a separate bucket with its existing overlap/time definition unchanged. Existing summary cards display the calculated totals without UI classification logic or redesign.
-- Pure `lib/analytics/analytics.ts` calculations are separate from React and charts. All actual time derives from stopped, positive, valid, non-void `time_sessions`; active counters and mutable task estimates never supply actuals.
-- Weeks are Monday–Sunday; months are calendar months. Timer sessions are attributed in full to their local **start date**, using the displayed browser timezone (overnight sessions are not split). Completion counts use local completion date. Future calendar dates are excluded; selected periods can still show empty future days. Date-only reading logs are not timezone shifted.
-- Focused time = eligible task timer seconds + exclusive reading seconds. Date-period filtering happens **before** combination. Reading `time_source=reading` minutes are additive; `task_timer` minutes are contextual overlap only, displayed separately and never added again. Pages from both reading sources count; voided pages/minutes do not. Other manually tracked sessions are unsupported and labeled, not invented.
-- Current-week/current-month focus summaries remain anchored to today. The week/month selector and date control drive selected-period summaries, category/course/day breakdowns, comparisons and page charts. Category/course charts show timer time only because reading logs have no category/course relationship. Day charts show combined focused time. Current stored classification IDs supply labels/grouping, including archived references and explicit unassigned buckets.
-- Task counts include currently completed retained tasks (including soft deletion), once per task, in the selected completion period. Reopened tasks leave completion metrics until recompleted. Average task duration uses **lifetime** eligible session totals of timed completed tasks, excluding untimed tasks from the denominator; counts and denominator are shown. Period focus time instead uses the session start date.
-- Effective-estimate and independent prediction errors compare frozen completion values with current corrected lifetime actuals. Bias = actual − estimate (positive means underestimated); mean absolute error is minutes; mean absolute percentage error divides by actual minutes. Only positive actuals with the corresponding snapshot value contribute. Default effective estimates are labeled; missing historical snapshots/predictions and empty samples are unavailable, never zero-error accuracy or fabricated trends.
-- Reading progress is current, across retained books, independent of the period. Pages-by-week uses nonvoid ledger page ranges, groups by Monday, and includes only selected-period dates in partial edge weeks. Manual progress offsets do not fabricate logged pages.
-
-### Architecture and local verification
-
-- Added analytics domain snapshot types, pure calculations, a read-only repository interface and paginated owner-pinned Supabase adapter; wired it into the existing repository context. The route uses existing authenticated layout/navigation. Parallel loading, loading/empty/error states, reload recovery and focus refresh follow existing conventions; cloud errors never fall back to mock metrics.
-- `components/analytics/analytics-board.tsx` provides dense summaries, accessible text with CSS bar charts for categories/courses/days/pages and paired estimate/actual bars, accuracy sample counts, and reading progress. No new charting/state dependency or navigation was added. Existing Reading/classification UI fixtures gained only the required empty analytics adapter.
-- `tests/analytics.test.ts`: boundaries (Monday/Sunday, months, year/leap/DST/local midnight), session eligibility, retained tasks, category/course/day/unassigned groups, study/non-study exact-second totals, overlap/date filtering, error math, lifetime actuals, microsecond snapshot selection, period-edge pages, current reading progress and honest empty states.
-- 2026-10-04 classification follow-up unit evidence: six added tests cover course-assigned tasks, null/omitted course assignments independent of task/category text, reading-only and declared overlap exclusion, mixed independent totals, archived-course historical tasks without requiring metadata, and period/future/active/void/zero exclusions. Updated the previous null-placeholder assertion to 3600 study seconds and 0 non-study seconds. `npm run lint` PASS (zero warnings), `npm run typecheck` PASS, `npm test` PASS **98/98**, `npm run build` PASS, `npm run test:analytics-ui` PASS (desktop/320px synthetic fixtures), and `git diff --check` PASS. No schema, migration, RLS, task/course relationship, reading calculation, or archive-behavior changes; no commit or push.
-- `tests/analytics-database.test.ts`: all migrations apply post-M5, row-for-row preservation of tasks/timers/books/reading, frozen snapshots, completion timestamp protection, reopen/recomplete/soft-delete retention, SQL/TypeScript estimator parity for all six levels and sample cap, active timer close, actuals after correction/void, reading correction/void, owner isolation, denied spoofing, compound FK, anonymous denial and read-only snapshots. `tests/analytics-repository.test.ts` covers paging, mapping, owner pinning and actionable failure handling.
-- Final verification 2026-10-04: `npm run lint` PASS (zero warnings), `npm run typecheck` PASS, `npm test` PASS **92/92** (all original 80 preserved, 12 analytics tests), `npm run build` PASS with `/analytics` generated, `npm run test:analytics-ui` PASS, and `git diff --check` PASS. No hosted test or rollout is implied.
-- `npm run test:analytics-ui`: isolated temporary Next app importing real production components and synthetic repositories; no hosted access. Desktop 1440×1000 and mobile 320×900 checks cover totals, overlap, estimate values/error, pages/progress, period switching, refresh, empty states, failed load/retry and horizontal overflow. The period control's label was fixed after the first fixture run exposed an exact-label lookup failure. Desktop/mobile screenshots were visually reviewed; no page exceptions. Screenshots are outside the repository in the current Codex visualization directory (`analytics-desktop.png`, `analytics-mobile.png`).
-
-### Intentionally unresolved decisions / limitations
-
-- **Study vs non-study productive classification resolved 2026-10-04:** course assignment alone classifies task timer time, including historical tasks linked to archived courses; reading stays separate. See the finalized rule and test evidence above. The original M6 null placeholders are replaced by numeric totals.
-- Historical snapshots cannot be backfilled accurately. Current classifications, corrected sessions and current book progress can change analytics; frozen estimates cannot. Browser timezone changes can regroup historical calendar dates. Overnight start-date attribution and the timed-only average denominator are explicit M6 choices.
-- The personal-use client loads paginated retained history; very large histories may eventually need server aggregation. Independent reads are not a single database snapshot; reload resolves concurrent edits. Exact-timestamp legacy-ID sort ties have the narrow SQL/JS collation limitation described above. Hosted migration/deployment and cross-account browser acceptance remain unperformed.
-
-### M6 hosted application checklist — 2026-10-04 (hosted rollout remains unchecked)
-
-- [ ] Review/backup production schema and confirm all M2–M5 migrations are present with no partial M6 application.
-- [ ] Apply `202610040001_analytics.sql` once to hosted Supabase using the approved deployment workflow; do not replay earlier SQL Editor migrations.
-- [ ] Confirm snapshot table/FK/index/RLS/grants and trigger installation; verify pre-existing tasks, sessions and books are preserved.
-- [ ] With authorized test accounts, verify completion (including active timer), manual/automatic/default snapshots, reload, reopen/recomplete, correction/void, and cross-account denial.
-- [ ] Deploy the verified application to Netlify after the database migration and confirm `/analytics` on desktop/mobile against authorized test data.
-- [x] Resolve the study/non-study product rule — authorized follow-up completed and locally verified 2026-10-04; no hosted operation required for this calculation-only change.
-
----
+Before each stage, verify prerequisites in code and the current plan rather than relying on the prompt's completion claim. If a check is blocked, record the exact blocker and do not mark acceptance complete. Feature code may require hosted migration application by a separate authorized step before production-backed browser acceptance. Existing production QA rules continue to apply; local schema-backed fixtures are distinct from authorized hosted QA.
 
 ## Hosted database checkpoint — migrations M4/M4.5/M4.6/M5 applied and verified 2026-10-04
 
@@ -180,7 +279,7 @@ Evidence remains outside the repository in the same visualization directory abov
 
 ---
 
-## Milestone 5 — Reading Tracker — implemented and hosted-accepted 2026-10-04
+## Milestone 5 — Reading Tracker — implemented; hosted acceptance pending 2026-10-03
 
 ### Implemented and locally verified
 
@@ -194,8 +293,7 @@ Evidence remains outside the repository in the same visualization directory abov
 - [x] Lint, typecheck and production build pass; all six migrations execute under embedded PostgreSQL and Reading ownership checks pass.
 - [x] Isolated desktop/320px browser fixture: add/start/log, quota/current-page updates, refresh, session correction, overlap marker, manual progress/history preservation, completion, archive/restore, removed history and actual-form pace/projection. Existing task/classification/topic/estimation/timer browser fixture also passes.
 - [x] Apply M5 migration to hosted Supabase after M4/M4.5/M4.6 migrations — completed and verified 2026-10-04 in the hosted checkpoint above.
-- [x] Authenticated hosted desktop acceptance, including sign-out/sign-in, real persistence/RLS, corrections and task/reading time-source behavior — passed 2026-10-04 (see hosted checkpoint above).
-- [ ] Authenticated hosted mobile acceptance (narrow-viewport flows against the hosted project).
+- [ ] Authenticated hosted desktop/mobile acceptance, including sign-out/sign-in, real persistence/RLS, corrections and task/reading time-source behavior.
 
 ### Book and session semantics
 
@@ -221,11 +319,11 @@ Local PostgreSQL tests verify lifecycle, page/status constraints, generated page
 
 Only public Supabase configuration is available; no authenticated management connection was found. Nothing was applied or verified on the hosted project during M5. Pending order: `202610030001_optional_manual_estimate.sql` → `202610030002_task_classification.sql` → `202610030003_task_topics.sql` → `202610030004_reading.sql`. Do not rerun M2/M3 migrations. All hosted M4/M4.5/M4.6/M5 acceptance remains a release gate and does not block M6 development.
 
-Task 11 and its reading tests below are reconciled to locally/browser-verified work. M6 Analytics, unified History, final hardening/security and outstanding V1 task requirements remain unchecked. The app is deployed to Netlify (2026-10-04). No external book API, ISBN/Goodreads, notes/highlights, recommendations, social features, calendars, notifications or Analytics UI was added. Ready for **M6 Analytics development** using existing task/timer/classification/topic/prediction/reading data.
+Task 11 and its reading tests below are reconciled to locally/browser-verified work. M6 Analytics, unified History, final hardening/security/deployment and outstanding V1 task requirements remain unchecked. No external book API, ISBN/Goodreads, notes/highlights, recommendations, social features, calendars, notifications or Analytics UI was added. Ready for **M6 Analytics development** using existing task/timer/classification/topic/prediction/reading data, with hosted release acceptance still pending.
 
 ---
 
-## Milestone 4.6 — Topics/Tags — implemented and hosted-accepted 2026-10-04
+## Milestone 4.6 — Topics/Tags — implemented; hosted acceptance pending 2026-10-03
 
 ### Implemented and locally verified
 
@@ -259,7 +357,7 @@ The codebase is ready to begin **M5 Reading Tracker** development after this loc
 
 ---
 
-## Milestone 4.5 — Task classification and full estimation hierarchy — implemented and hosted-accepted 2026-10-04
+## Milestone 4.5 — Task classification and full estimation hierarchy — implemented, hosted acceptance pending 2026-10-03
 
 ### Verified implementation and local acceptance
 
@@ -273,8 +371,8 @@ The codebase is ready to begin **M5 Reading Tracker** development after this loc
 - [x] Historical reclassification changes future derived predictions; M4 session eligibility, soft-delete, reopening, correction/void behavior retained.
 - [x] All original 39 tests retained; 18 added classification/hierarchy/adapter/PostgreSQL tests (57 total) pass, alongside lint, typecheck, and optimized build.
 - [x] Isolated browser UI fixture verifies actual components with synthetic history: title-only/category-only/course-only/type-only capture/editing, all six hierarchy levels and insufficient-history fallback, named explanations, manual override, Momentum, Today/Week, rename/archive/restore, retained archived assignments, refresh, timer start/stop UI recovery, and 320px creation/editing.
-- [x] Apply pending M4 migration `202610030001_optional_manual_estimate.sql`, then M4.5 migration `202610030002_task_classification.sql` to the hosted project. (Done 2026-10-04 — see hosted checkpoint.)
-- [x] Repeat the M4 and M4.5 flows against hosted Supabase with an authenticated browser, including real timer completion/correction/void, persisted classification edits, archived references, and refresh. (Passed 2026-10-04 — see hosted checkpoint. Mobile workflows and cross-account ownership checks remain unverified.)
+- [ ] Apply pending M4 migration `202610030001_optional_manual_estimate.sql`, then M4.5 migration `202610030002_task_classification.sql` to the hosted project.
+- [ ] Repeat the M4 and M4.5 flows against hosted Supabase with an authenticated browser, including real timer completion/correction/void, persisted classification edits, archived references, refresh, mobile workflows, and ownership checks.
 
 ### Classification architecture and semantics
 
@@ -302,7 +400,7 @@ Apply both pending migrations in order and finish the hosted acceptance checklis
 
 ---
 
-## Milestone 4 — Deterministic duration estimation — implemented and hosted-accepted 2026-10-04
+## Milestone 4 — Deterministic duration estimation — implemented, hosted acceptance pending 2026-10-03
 
 The authorized scope was persisted task/session history → deterministic prediction → effective estimate → Momentum/Today/Week. M4 originally used category/global matching; its course/task-type deferral was implemented in Milestone 4.5 above. The mathematical and manual-precedence decisions below remain in effect.
 
@@ -732,13 +830,13 @@ Do not claim completion if relevant checks fail.
 
 ## Task 2 — Connect Supabase
 
-- [x] Create Supabase project. (Done 2026-09-29; hosted "Task Manager" project live and verified 2026-10-04.)
-- [x] Add required environment variables. (`.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; same vars set on the Netlify deploy 2026-10-04.)
-- [x] Create browser/client Supabase helper. (`lib/supabase/client.ts`)
-- [x] Create server Supabase helper. (`lib/supabase/server.ts`)
-- [x] Confirm a server-side database request succeeds. (Verified through app flows and SQL Editor 2026-10-04.)
-- [x] Typed database support — N/A: explicit TypeScript domain types are used instead of generated types (see AGENTS.md).
-- [x] Document local environment setup in README. (README "Set up Supabase" section.)
+- [ ] Create Supabase project.
+- [ ] Add required environment variables.
+- [ ] Create browser/client Supabase helper.
+- [ ] Create server Supabase helper.
+- [ ] Confirm a server-side database request succeeds.
+- [ ] Add typed database support if generated types are used.
+- [ ] Document local environment setup in README.
 
 ### Acceptance Criteria
 
@@ -749,7 +847,7 @@ Do not claim completion if relevant checks fail.
 
 ### Implementation Notes
 
-- Completed 2026-09-29 with the M2 persistence milestone; reconfirmed against the hosted project 2026-10-04 (all six migrations applied, RLS/policies/RPCs verified, app flows passing).
+_Add notes here when complete._
 
 ---
 
@@ -979,8 +1077,8 @@ Implement:
 - [x] Reopen task.
 - [x] Archive/delete task behavior.
 - [x] Assign category.
-- [x] Assign course (M4.5; hosted acceptance passed 2026-10-04).
-- [x] Assign task type (M4.5; hosted acceptance passed 2026-10-04).
+- [x] Assign course (M4.5; hosted acceptance pending).
+- [x] Assign task type (M4.5; hosted acceptance pending).
 - [x] Assign priority.
 - [ ] Assign due date/time.
 - [x] Assign scheduled date.
@@ -1126,8 +1224,8 @@ Required:
 - [x] Implement weighted recent average.
 - [x] Require a reasonable minimum history before displaying a strong prediction.
 - [x] Return metadata describing prediction source.
-- [x] Derive predicted duration when needed; snapshot persistence implemented locally in Milestone 6; hosted M6 application pending.
-- [x] Allow manual estimate to remain visible separately (signed-in browser acceptance passed 2026-10-04).
+- [x] Derive predicted duration when needed; snapshot persistence deferred to Milestone 6.
+- [x] Allow manual estimate to remain visible separately (signed-in browser acceptance pending).
 
 Possible return shape:
 
@@ -1157,7 +1255,7 @@ type DurationPrediction = {
 
 ### Implementation Notes
 
-2026-10-03: Pure estimator, nullable manual override, retained task history, shared Momentum/Today/Week calculations, and compact estimate details implemented. Algorithm, eligibility, parameters, tests, migration instructions, and pending hosted/browser acceptance are recorded in Milestone 4 above. The pending checks passed against hosted Supabase 2026-10-04 — M4 is accepted (mobile and cross-account checks deferred).
+2026-10-03: Pure estimator, nullable manual override, retained task history, shared Momentum/Today/Week calculations, and compact estimate details implemented. Algorithm, eligibility, parameters, tests, migration instructions, and pending hosted/browser acceptance are recorded in Milestone 4 above. Do not mark M4 fully accepted until those pending checks pass.
 
 2026-10-03: M4.5 adds independent course/task-type records and all comparison levels without changing estimation mathematics or effective-estimate precedence. See the M4.5 ledger for local SQL/browser evidence and remaining hosted acceptance.
 
@@ -1210,19 +1308,18 @@ lib/analytics/
 
 Required metrics:
 
-- [x] Total tracked time this week.
-- [x] Total tracked time this month.
-- [x] Study time — task timer time with `course_id != null`, including archived courses; see M6 ledger.
-- [x] Non-study productive time — task timer time with `course_id == null`; reading remains separate; see M6 ledger.
-- [x] Reading time.
-- [x] Time by category.
-- [x] Time by course.
-- [x] Time by day.
-- [x] Tasks completed.
-- [x] Average task duration.
-- [x] Estimated vs actual duration.
-- [x] Prediction error.
-- [x] Pages read per week.
+- [ ] Total tracked time this week.
+- [ ] Total tracked time this month.
+- [ ] Study time.
+- [ ] Reading time.
+- [ ] Time by category.
+- [ ] Time by course.
+- [ ] Time by day.
+- [ ] Tasks completed.
+- [ ] Average task duration.
+- [ ] Estimated vs actual duration.
+- [ ] Prediction error.
+- [ ] Pages read per week.
 
 ### Acceptance Criteria
 
@@ -1232,7 +1329,7 @@ Required metrics:
 
 ### Implementation Notes
 
-2026-10-04: Implemented and locally verified by the M6 ledger above. The authorized follow-up completes study/non-study classification from course assignment; reading remains separate. Hosted rollout remains unchecked.
+_Add notes here when complete._
 
 ---
 
@@ -1259,10 +1356,10 @@ Recommended layout:
 
 Required:
 
-- [x] Responsive layout.
-- [x] Empty states.
-- [x] Human-readable duration formatting.
-- [x] Date-period selector if feasible.
+- [ ] Responsive layout.
+- [ ] Empty states.
+- [ ] Human-readable duration formatting.
+- [ ] Date-period selector if feasible.
 
 ### Acceptance Criteria
 
@@ -1272,7 +1369,7 @@ Required:
 
 ### Implementation Notes
 
-2026-10-04: Implemented and locally verified by the M6 ledger above. Existing study/non-study summary cards now display domain-calculated course-assignment totals; reading remains separate. Hosted rollout remains unchecked.
+_Add notes here when complete._
 
 ---
 
@@ -1348,7 +1445,7 @@ Required tests:
 - [x] Time-session aggregation.
 - [x] Daily workload calculation.
 - [x] Reading quota calculation.
-- [x] Analytics date grouping.
+- [ ] Analytics date grouping.
 - [x] Task sorting.
 - [x] Priority ordering.
 - [x] Deadline ordering.
@@ -1358,7 +1455,7 @@ Where practical, add integration tests for:
 - [ ] Authentication-protected routes.
 - [ ] Task creation.
 - [x] Timer lifecycle.
-- [x] Reading-session creation (local PostgreSQL + browser fixture; hosted passed 2026-10-04).
+- [x] Reading-session creation (local PostgreSQL + browser fixture; hosted pending).
 
 ### Acceptance Criteria
 
